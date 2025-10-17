@@ -28,6 +28,7 @@
     .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
     .btn-primary{background:var(--tint);color:#fff}
     .btn-primary:hover{background:var(--tint-2)}
+    .btn-ghost{background:#fff;border:1px solid var(--separator)}
 
     /* 內容區塊 */
     .grid{display:grid;grid-template-columns:1fr;gap:6mm}
@@ -42,6 +43,8 @@
     .map{height:140mm; border-radius:14px; overflow:hidden}
     .map-card{background:var(--card); border:1px solid var(--separator); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px}
     .map-subtitle{margin:0 0 8px; font-size:13px; color:#555;}
+    .map-head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px}
+    .map-actions{display:flex; gap:8px}
 
     .summary-table-wrap{background:var(--card); border:1px solid var(--separator); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px}
     .summary-title{font-weight:800;margin:0 0 8px; font-size:15px}
@@ -75,7 +78,7 @@
   <!-- 只保留「直接列印」 -->
   <header>
     <div class="titlebar">
-      <div class="title">機關差旅費里程計算機（友善列印）</div>
+      <div class="title">機關差旅費里程計算機</div>
 	  <div class="subtitle">本計算機計算結果僅供參考，規劃路徑時不計交通狀況，並以最佳汽車路徑為規劃方向</div> <span class="badge">Developed by DennisZ</span>
       <div class="spacer"></div>
     </div>
@@ -152,7 +155,13 @@
 
       <!-- 地圖 -->
       <div class="map-card" id="mapCard">
-        <h4 class="map-subtitle">Google 地圖對應之最短路徑</h4>
+        <div class="map-head">
+          <h4 class="map-subtitle">Google 地圖對應之最短路徑</h4>
+          <div class="map-actions">
+            <button id="btnToggleEdit" class="btn btn-ghost" title="拖曳地圖上的別針以微調位置">微調地點</button>
+            <button id="btnConfirmEdit" class="btn btn-primary" style="display:none" title="重新計算里程與費用">確認更新</button>
+          </div>
+        </div>
         <div id="map" class="map"></div>
       </div>
     </section>
@@ -165,6 +174,10 @@
 
     let markers = [], routePolyline = null, waypoints = { origin:null, dest:null };
     let lastFocused = 'origin';
+    let editMode = false;
+    const btnToggleEdit = document.getElementById('btnToggleEdit');
+    const btnConfirmEdit = document.getElementById('btnConfirmEdit');
+
     document.getElementById('origin').addEventListener('focus', ()=> lastFocused='origin');
     document.getElementById('destination').addEventListener('focus', ()=> lastFocused='destination');
 
@@ -183,10 +196,83 @@
     function geocode(name){ return fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(name)}`).then(r=>r.json()).then(arr=>arr[0]); }
 
     function clearRoute(){ if(markers.length){markers.forEach(m=>map.removeLayer(m)); markers=[];} if(routePolyline){ map.removeLayer(routePolyline); routePolyline=null; } }
-    function addMarkerWithLabel(lat, lng, label){ const m = L.marker([lat, lng]).addTo(map); if(label){ m.bindTooltip(label, { permanent:true, direction:'top', offset:[0,-10], className:'label-tooltip' }).openTooltip(); } return m; }
+
+    function addMarkerWithLabel(lat, lng, label, opts={}){
+      const m = L.marker([lat, lng], { draggable: !!opts.draggable }).addTo(map);
+      if(label){ m.bindTooltip(label, { permanent:true, direction:'top', offset:[0,-10], className:'label-tooltip' }).openTooltip(); }
+      m._role = opts.role || null;
+      if(opts.draggable && m.dragging){ m.dragging.enable(); }
+      m.on('dragend', (e)=>{
+        const ll = e.target.getLatLng();
+        if(e.target._role === 'origin') waypoints.origin = {lat: ll.lat, lng: ll.lng};
+        if(e.target._role === 'dest')   waypoints.dest   = {lat: ll.lat, lng: ll.lng};
+      });
+      return m;
+    }
+
+    function applyMarkerDraggable(draggable){
+      markers.forEach(m=>{ if(m.dragging){ draggable ? m.dragging.enable() : m.dragging.disable(); } });
+    }
+
+    function enterEditMode(){
+      if(!markers.length){ alert('請先完成一次路線計算'); return; }
+      editMode = true;
+      btnConfirmEdit.style.display = 'inline-block';
+      btnToggleEdit.textContent = '取消微調';
+      applyMarkerDraggable(true);
+    }
+    function exitEditMode(){
+      editMode = false;
+      btnConfirmEdit.style.display = 'none';
+      btnToggleEdit.textContent = '微調地點';
+      applyMarkerDraggable(false);
+    }
+
+    btnToggleEdit.addEventListener('click', ()=>{ editMode ? exitEditMode() : enterEditMode(); });
+    btnConfirmEdit.addEventListener('click', ()=>{ if(!waypoints.origin || !waypoints.dest){ alert('尚未設定完整的出發與目的地'); return; } recomputeFromWaypoints(); exitEditMode(); });
 
     function roundCurrency(n){ return isFinite(n) ? String(Math.round(n)) : '—'; }
     function formatKm(km){ return isFinite(km) ? (km.toFixed(1) + ' 公里') : '—'; }
+
+    function recomputeFromWaypoints(){
+      const originLabel = document.getElementById('originAlias').value.trim() || document.getElementById('origin').value.trim() || '出發地';
+      const destLabel   = document.getElementById('destAlias').value.trim()   || document.getElementById('destination').value.trim() || '目的地';
+      const fuel = parseFloat(document.getElementById('fuelPrice').value);
+      if(!(fuel>=0)) { alert('請輸入正確的每公里費用'); return; }
+
+      clearRoute();
+      const mk1 = addMarkerWithLabel(waypoints.origin.lat, waypoints.origin.lng, originLabel, {draggable: editMode, role:'origin'});
+      const mk2 = addMarkerWithLabel(waypoints.dest.lat,   waypoints.dest.lng,   destLabel,   {draggable: editMode, role:'dest'});
+      markers.push(mk1,mk2);
+
+      const plan = new L.Routing.Plan([
+        L.latLng(waypoints.origin.lat, waypoints.origin.lng),
+        L.latLng(waypoints.dest.lat,   waypoints.dest.lng)
+      ], { draggableWaypoints:false, addWaypoints:false });
+
+      const router = L.Routing.osrmv1({ serviceUrl:'https://router.project-osrm.org/route/v1' });
+      router.route(plan.getWaypoints(), (err, routes)=>{
+        if(err){ alert('路線規劃錯誤'); return; }
+        const best = routes[0];
+        const km = best.summary.totalDistance / 1000;
+
+        const latlngs = best.coordinates.map(c => L.latLng(c.lat, c.lng));
+        routePolyline = L.polyline(latlngs, { color: getComputedStyle(document.documentElement).getPropertyValue('--route').trim() || '#ff3b30', weight:7, opacity:.98, lineJoin:'round', lineCap:'round', renderer:L.canvas() }).addTo(map).bringToFront();
+        map.fitBounds(routePolyline.getBounds(), {padding:[40,40]});
+
+        const oneRaw = km * fuel; const roundRaw = oneRaw * 2;
+        document.getElementById('sumOrigin').textContent = originLabel;
+        document.getElementById('sumDest').textContent   = destLabel;
+        document.getElementById('sumDist').textContent   = formatKm(km);
+        document.getElementById('sumOne').textContent    = roundCurrency(oneRaw)  + ' 元';
+        document.getElementById('sumRound').textContent  = roundCurrency(roundRaw)+ ' 元';
+        document.getElementById('sumPerKm').textContent  = (isFinite(fuel) ? fuel.toFixed(1) : '—') + ' 元/公里';
+
+        // 以最新拖曳後的位置更新歷史
+        upsertPlace({ lat:waypoints.origin.lat, lng:waypoints.origin.lng, displayName: document.getElementById('origin').value.trim() || originLabel, customName: document.getElementById('originAlias').value.trim() });
+        upsertPlace({ lat:waypoints.dest.lat,   lng:waypoints.dest.lng,   displayName: document.getElementById('destination').value.trim() || destLabel, customName: document.getElementById('destAlias').value.trim() });
+      });
+    }
 
     // ===== 計算路線與費用 =====
     document.getElementById('btn-calc').addEventListener('click', async()=>{
@@ -210,8 +296,8 @@
       upsertPlace({ lat:waypoints.dest.lat,   lng:waypoints.dest.lng,   displayName: g2.display_name || destination, customName: destAlias });
 
       clearRoute();
-      const mk1 = addMarkerWithLabel(waypoints.origin.lat, waypoints.origin.lng, originAlias || origin);
-      const mk2 = addMarkerWithLabel(waypoints.dest.lat, waypoints.dest.lng, destAlias || destination);
+      const mk1 = addMarkerWithLabel(waypoints.origin.lat, waypoints.origin.lng, originAlias || origin, {draggable: editMode, role:'origin'});
+      const mk2 = addMarkerWithLabel(waypoints.dest.lat, waypoints.dest.lng, destAlias || destination, {draggable: editMode, role:'dest'});
       markers.push(mk1,mk2);
 
       const plan = new L.Routing.Plan([
