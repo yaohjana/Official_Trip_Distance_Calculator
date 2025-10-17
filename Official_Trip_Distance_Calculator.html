@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>機關差旅費里程計算機-基於公開地圖資料的距離計算工具</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <!-- Leaflet Routing Machine -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+  <style>
+    :root{ --bg:#f5f5f7; --card:#ffffff; --tint:#0a84ff; --tint-2:#0057d6; --label:#1c1c1e; --secondary:#6e6e73; --separator:#e5e5ea; --radius:18px; --shadow:0 8px 24px rgba(0,0,0,.08); --route:#ff3b30; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{ margin:0; background:var(--bg); color:var(--label); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif; line-height:1.45; }
+
+    .container{max-width:210mm;margin:0 auto;padding:10mm}
+
+    /* 單一固定工具列（只留直接列印） */
+    header{ position:sticky; top:0; z-index:10; backdrop-filter:saturate(180%) blur(20px); background:rgba(245,245,247,.85); border-bottom:1px solid var(--separator); }
+    .titlebar{display:flex; align-items:center; gap:12px; padding:8px 10mm}
+    .title{font-size:18px;font-weight:800}
+    .spacer{flex:1}
+    .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+    .btn-primary{background:var(--tint);color:#fff}
+    .btn-primary:hover{background:var(--tint-2)}
+
+    /* 內容區塊 */
+    .grid{display:grid;grid-template-columns:1fr;gap:6mm}
+    .card{background:var(--card); border:1px solid var(--separator); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px}
+    .card h3{margin:0 0 12px;font-size:17px}
+
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+    label{font-size:13px;color:var(--secondary);display:block;margin-bottom:6px}
+    input[type="text"],input[type="number"],select{width:100%;padding:12px 14px;border:1px solid var(--separator);border-radius:12px;background:#fdfdfd;font-size:16px}
+    .btn-full{width:100%}
+
+    .map{height:140mm; border-radius:14px; overflow:hidden}
+    .map-card{background:var(--card); border:1px solid var(--separator); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px}
+    .map-subtitle{margin:0 0 8px; font-size:13px; color:#555;}
+
+    .summary-table-wrap{background:var(--card); border:1px solid var(--separator); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px}
+    .summary-title{font-weight:800;margin:0 0 8px; font-size:15px}
+    table.summary{width:100%; border-collapse:collapse; font-weight:700}
+    table.summary th, table.summary td{ border:1px solid var(--separator); padding:8px 10px; text-align:left; }
+    table.summary th{ background:#f7f7fa; color:#333; font-weight:800 }
+
+    .page-title{font-weight:900; font-size:20px; margin:8px 0 8px 0}
+
+    /* 編輯區在頁面最上方；列印時自動隱藏 */
+    #inputsCard{ transition: max-height .25s ease, padding .2s ease, margin .2s ease, border-width .2s ease; overflow:hidden }
+    #inputsCard.collapsed{ max-height:0; padding:0; margin:0; border-width:0; }
+    body.hide-editor #inputsCard{ display:none !important; }
+
+    @media print{
+      header{ display:none !important; }
+      .container{ max-width:210mm !important; padding:10mm !important; }
+      .grid{ gap:6mm !important; }
+      .map{ height:140mm !important; }
+      #inputsCard.collapsed{ display:none !important; }
+    }
+
+    /* Leaflet 標籤樣式 */
+    .label-tooltip{background:#fff;border:1px solid rgba(0,0,0,.15);color:#111;padding:2px 6px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+
+    .badge { align:right; font-size: 12px; padding: 4px 8px; border: 1px solid #334155; border-radius: 999px; color: #334155;}
+	#btnPrintNow {background-color:red}
+  </style>
+</head>
+<body class="print-mode">
+  <!-- 只保留「直接列印」 -->
+  <header>
+    <div class="titlebar">
+      <div class="title">機關差旅費里程計算機（友善列印）</div>
+	  <div class="subtitle">本計算機計算結果僅供參考，規劃路徑時不計交通狀況，並以最佳汽車路徑為規劃方向</div> <span class="badge">Developed by DennisZ</span>
+      <div class="spacer"></div>
+    </div>
+  </header>
+
+  <div class="container">
+    <h1 class="page-title">機關所在地與出差地之路程計算</h1>
+
+    <section class="grid">
+      <!-- 編輯區塊置頂 -->
+      <div class="card" id="inputsCard">
+
+        <h3>輸入地點</h3>
+        <div class="form-row">
+          <div>
+            <label>出發地點</label>
+            <input id="origin" type="text" placeholder="輸入出發地名…">
+            <label style="margin-top:8px">自訂出發地名稱（可空白）</label>
+            <input id="originAlias" type="text" placeholder="例如：公司、家裡、XX校區…">
+          </div>
+          <div>
+            <label>目的地點</label>
+            <input id="destination" type="text" placeholder="輸入目的地名…">
+            <label style="margin-top:8px">自訂目的地名稱（可空白）</label>
+            <input id="destAlias" type="text" placeholder="例如：客戶A、分部、XX場館…">
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label>每公里燃油費（元）</label>
+            <input id="fuelPrice" type="number" min="0" step="0.1" value="3">
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:10px">
+            <button id="btn-calc" class="btn btn-primary btn-primary">計算最佳路線與費用</button>
+			<button id="btnPrintNow" class="btn btn-primary">超友善列印</button>
+          </div>
+        </div>
+
+        <div class="history" id="historyBox" style="display:none">
+          <h4>歷史地點（點擊可填入目前聚焦欄位）</h4>
+          <div class="chips" id="historyChips"></div>
+        </div>
+      </div>
+
+      <!-- 摘要表格 -->
+      <div class="summary-table-wrap" id="summaryWrap">
+        <p class="summary-title">出差距離費用計算：</p>
+		
+        <table class="summary">
+          <tbody>
+            <tr>
+              <th>出發地</th>
+              <th>目的地</th>
+              <th>總距離</th>
+            </tr>
+            <tr>
+              <td id="sumOrigin">—</td>
+              <td id="sumDest">—</td>
+              <td id="sumDist">—</td>
+            </tr>
+            <tr>
+              <th>每公里費用</th>
+              <th>單程費用</th>
+              <th>往返費用</th>
+            </tr>
+            <tr>
+              <td id="sumPerKm">—</td>
+              <td id="sumOne">—</td>
+              <td id="sumRound">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 地圖 -->
+      <div class="map-card" id="mapCard">
+        <h4 class="map-subtitle">Google 地圖對應之最短路徑</h4>
+        <div id="map" class="map"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // ===== 地圖與狀態 =====
+    const map = L.map('map', { zoomAnimation:false }).setView([23.7, 120.9], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', crossOrigin:true }).addTo(map);
+
+    let markers = [], routePolyline = null, waypoints = { origin:null, dest:null };
+    let lastFocused = 'origin';
+    document.getElementById('origin').addEventListener('focus', ()=> lastFocused='origin');
+    document.getElementById('destination').addEventListener('focus', ()=> lastFocused='destination');
+
+    // 初始修正 Leaflet 尺寸（因 sticky header / A4 寬度）
+    window.addEventListener('load', ()=> setTimeout(()=> map.invalidateSize({animate:false}), 0));
+
+    // ===== 地點歷史（localStorage） =====
+    const STORAGE_KEY = 'fuelcalc_places_v145';
+    function loadHistory(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); }catch(e){ return []; } }
+    function saveHistory(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+    function upsertPlace(place){ const list = loadHistory(); const idx = list.findIndex(p=> Math.abs(p.lat - place.lat) < 1e-6 && Math.abs(p.lng - place.lng) < 1e-6); if(idx>=0) list[idx] = { ...list[idx], ...place, ts: Date.now() }; else list.unshift({ ...place, ts: Date.now() }); saveHistory(list.slice(0,20)); renderHistory(); }
+    function renderHistory(){ const chips = document.getElementById('historyChips'); const box = document.getElementById('historyBox'); const list = loadHistory(); chips.innerHTML=''; if(!list.length){ box.style.display='none'; return;} list.forEach(p=>{ const btn = document.createElement('button'); btn.className='tag'; btn.title = `${p.displayName} (${p.lat.toFixed(5)}, ${p.lng.toFixed(5)})`; btn.textContent = p.customName || p.displayName.split(',')[0]; btn.addEventListener('click', ()=>{ const targetId = lastFocused === 'origin' ? 'origin' : 'destination'; document.getElementById(targetId).value = p.displayName; if(targetId==='origin') waypoints.origin = {lat:p.lat, lng:p.lng}; else waypoints.dest = {lat:p.lat, lng:p.lng}; }); chips.appendChild(btn); }); box.style.display='block'; }
+    renderHistory();
+
+    // ===== Geocode =====
+    function geocode(name){ return fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(name)}`).then(r=>r.json()).then(arr=>arr[0]); }
+
+    function clearRoute(){ if(markers.length){markers.forEach(m=>map.removeLayer(m)); markers=[];} if(routePolyline){ map.removeLayer(routePolyline); routePolyline=null; } }
+    function addMarkerWithLabel(lat, lng, label){ const m = L.marker([lat, lng]).addTo(map); if(label){ m.bindTooltip(label, { permanent:true, direction:'top', offset:[0,-10], className:'label-tooltip' }).openTooltip(); } return m; }
+
+    function roundCurrency(n){ return isFinite(n) ? String(Math.round(n)) : '—'; }
+    function formatKm(km){ return isFinite(km) ? (km.toFixed(1) + ' 公里') : '—'; }
+
+    // ===== 計算路線與費用 =====
+    document.getElementById('btn-calc').addEventListener('click', async()=>{
+      const origin = document.getElementById('origin').value.trim();
+      const destination = document.getElementById('destination').value.trim();
+      const originAlias = document.getElementById('originAlias').value.trim();
+      const destAlias = document.getElementById('destAlias').value.trim();
+      const fuel = parseFloat(document.getElementById('fuelPrice').value);
+      if(!origin || !destination || !(fuel>=0)) { alert('請完整輸入出發/目的地與油資'); return; }
+
+      let g1 = waypoints.origin ? {lat:waypoints.origin.lat, lon:waypoints.origin.lng, display_name: origin} : null;
+      let g2 = waypoints.dest   ? {lat:waypoints.dest.lat,   lon:waypoints.dest.lng,   display_name: destination} : null;
+      if(!g1) g1 = await geocode(origin);
+      if(!g2) g2 = await geocode(destination);
+      if(!g1||!g2){ alert('地名查詢失敗，請換關鍵字'); return; }
+
+      waypoints.origin = {lat:parseFloat(g1.lat), lng:parseFloat(g1.lon)};
+      waypoints.dest   = {lat:parseFloat(g2.lat), lng:parseFloat(g2.lon)};
+
+      upsertPlace({ lat:waypoints.origin.lat, lng:waypoints.origin.lng, displayName: g1.display_name || origin, customName: originAlias });
+      upsertPlace({ lat:waypoints.dest.lat,   lng:waypoints.dest.lng,   displayName: g2.display_name || destination, customName: destAlias });
+
+      clearRoute();
+      const mk1 = addMarkerWithLabel(waypoints.origin.lat, waypoints.origin.lng, originAlias || origin);
+      const mk2 = addMarkerWithLabel(waypoints.dest.lat, waypoints.dest.lng, destAlias || destination);
+      markers.push(mk1,mk2);
+
+      const plan = new L.Routing.Plan([
+        L.latLng(waypoints.origin.lat, waypoints.origin.lng),
+        L.latLng(waypoints.dest.lat,   waypoints.dest.lng)
+      ], { draggableWaypoints:false, addWaypoints:false });
+
+      const router = L.Routing.osrmv1({ serviceUrl:'https://router.project-osrm.org/route/v1' });
+      router.route(plan.getWaypoints(), (err, routes)=>{
+        if(err){ alert('路線規劃錯誤'); return; }
+        const best = routes[0];
+        const km = best.summary.totalDistance / 1000;
+
+        const latlngs = best.coordinates.map(c => L.latLng(c.lat, c.lng));
+        routePolyline = L.polyline(latlngs, { color: getComputedStyle(document.documentElement).getPropertyValue('--route').trim() || '#ff3b30', weight:7, opacity:.98, lineJoin:'round', lineCap:'round', renderer:L.canvas() }).addTo(map).bringToFront();
+        map.fitBounds(routePolyline.getBounds(), {padding:[40,40]});
+
+        const oneRaw = km * fuel; const roundRaw = oneRaw * 2;
+        document.getElementById('sumOrigin').textContent = originAlias || origin;
+        document.getElementById('sumDest').textContent   = destAlias || destination;
+        document.getElementById('sumDist').textContent   = formatKm(km);
+        document.getElementById('sumOne').textContent    = roundCurrency(oneRaw)  + ' 元';
+        document.getElementById('sumRound').textContent  = roundCurrency(roundRaw)+ ' 元';
+        document.getElementById('sumPerKm').textContent  = (isFinite(fuel) ? fuel.toFixed(1) : '—') + ' 元/公里';
+      });
+    });
+
+    // ===== 直接列印（列印時隱藏編輯區，結束後恢復） =====
+    const btnPrint = document.getElementById('btnPrintNow');
+    const inputsCard = document.getElementById('inputsCard');
+
+    btnPrint.addEventListener('click', ()=>{
+      document.body.classList.add('hide-editor');
+      inputsCard.classList.add('collapsed');
+      setTimeout(()=> window.print(), 50);
+    });
+
+    window.addEventListener('beforeprint', ()=>{
+      document.body.classList.add('hide-editor');
+      inputsCard.classList.add('collapsed');
+    });
+
+    window.addEventListener('afterprint', ()=>{
+      document.body.classList.remove('hide-editor');
+      inputsCard.classList.remove('collapsed');
+    });
+  </script>
+</body>
+</html>
