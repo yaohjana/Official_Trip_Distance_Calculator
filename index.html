@@ -142,6 +142,16 @@
           </div>
         </div>
         <div class="form-row">
+          <div>
+            <label>總距離計算位數（影響費用計算）</label>
+            <select id="decimalPlaces">
+              <option value="0">整數（無小數點）</option>
+              <option value="1" selected>小數點第一位（預設）</option>
+              <option value="2">小數點第二位</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
           <div style="display:flex;align-items:flex-end;gap:10px">
             <button id="btn-calc" class="btn btn-primary btn-primary">計算最佳路線與費用</button>
             <button id="btnPrintNow" class="btn btn-primary">超友善列印</button>
@@ -326,8 +336,21 @@
     btnConfirmEdit.addEventListener('click', ()=>{ if(!waypoints.origin || !waypoints.dest){ alert('尚未設定完整的出發與目的地'); return; } recomputeFromWaypoints(); exitEditMode(); });
 
     function roundCurrency(n){ return isFinite(n) ? String(Math.round(n)) : '—'; }
-    // ✅ 距離改為到小數點第 2 位
-    function formatKm(km){ return isFinite(km) ? (km.toFixed(2) + ' 公里') : '—'; }
+    
+    // ✅ 根據選擇的位數格式化距離
+    function formatKm(km){ 
+      if(!isFinite(km)) return '—';
+      const places = parseInt(document.getElementById('decimalPlaces').value);
+      return km.toFixed(places) + ' 公里';
+    }
+    
+    // ✅ 根據選擇的位數四捨五入距離
+    function roundDistance(km){
+      if(!isFinite(km)) return 0;
+      const places = parseInt(document.getElementById('decimalPlaces').value);
+      const multiplier = Math.pow(10, places);
+      return Math.round(km * multiplier) / multiplier;
+    }
 
     // ===== 規則判斷：雜費／住宿 =====
     function evaluateMiscAndLodge(kmOneWay, tripType){
@@ -353,17 +376,20 @@
     }
 
     function applySummary(originLabel, destLabel, km, fuel, tripType){
-      const roundKm = km * 2;
-      const oneRaw = km * fuel; const roundRaw = oneRaw * 2;
+      // ✅ 根據選擇的位數四捨五入距離
+      const roundedKm = roundDistance(km);
+      const roundTripKm = roundedKm * 2;
+      const oneWayFee = roundedKm * fuel;
+      const roundTripFee = oneWayFee * 2;
 
       document.getElementById('sumOrigin').textContent = originLabel;
       document.getElementById('sumDest').textContent   = destLabel;
-      document.getElementById('sumDist').innerHTML     = `${formatKm(km)}（來回：${roundKm.toFixed(2)} 公里）`;
-      document.getElementById('sumOne').textContent    = roundCurrency(oneRaw)  + ' 元';
-      document.getElementById('sumRound').textContent  = roundCurrency(roundRaw)+ ' 元';
+      document.getElementById('sumDist').innerHTML     = `${formatKm(roundedKm)}（來回：${formatKm(roundTripKm)}）`;
+      document.getElementById('sumOne').textContent    = roundCurrency(oneWayFee)  + ' 元';
+      document.getElementById('sumRound').textContent  = roundCurrency(roundTripFee)+ ' 元';
       document.getElementById('sumPerKm').textContent  = (isFinite(fuel) ? fuel.toFixed(1) : '—') + ' 元/公里';
 
-      const evals = evaluateMiscAndLodge(km, tripType);
+      const evals = evaluateMiscAndLodge(roundedKm, tripType);
       document.getElementById('sumMisc').innerHTML   = evals.miscText;
       document.getElementById('sumLodge').innerHTML  = evals.lodgeText;
       document.getElementById('sumType').textContent = (tripType === 'training' ? '訓練／講習' : '一般出差');
@@ -418,6 +444,19 @@
     });
     document.getElementById('tripType').addEventListener('change', ()=>{
       if(!routePolyline) return;
+      recomputeFromWaypoints();
+    });
+    
+    // ===== 小數位數變更提醒 =====
+    document.getElementById('decimalPlaces').addEventListener('change', ()=>{
+      if(!routePolyline) return;
+      const places = parseInt(document.getElementById('decimalPlaces').value);
+      let placesText = '';
+      if(places === 0) placesText = '整數（無小數點）';
+      else if(places === 1) placesText = '小數點第一位';
+      else if(places === 2) placesText = '小數點第二位';
+      
+      alert(`⚠️ 提醒：\n\n您已將距離計算位數變更為「${placesText}」。\n\n這將影響總距離、單程費用與往返費用的計算結果。\n\n請注意：假單上填寫的金額也需要跟著調整！`);
       recomputeFromWaypoints();
     });
 
