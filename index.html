@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>機關差旅費里程計算機</title>
+  <title>機關差旅費里程計算機 Pro</title>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
@@ -11,521 +11,1355 @@
   <!-- Leaflet Routing Machine -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+  <!-- SortableJS for drag and drop (Optional future enhancement, currently simplified) -->
 
   <style>
-    :root{ --bg:#f5f5f7; --card:#ffffff; --tint:#0a84ff; --tint-2:#0057d6; --label:#1c1c1e; --secondary:#6e6e73; --separator:#e5e5ea; --radius:18px; --shadow:0 8px 24px rgba(0,0,0,.08); --route:#ff3b30; }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{ margin:0; background:var(--bg); color:var(--label); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif; line-height:1.45; }
-
-    .container{max-width:210mm;margin:0 auto;padding:10mm}
-
-    /* 工具列 */
-    header{ position:sticky; top:0; z-index:10; backdrop-filter:saturate(180%) blur(20px); background:rgba(245,245,247,.85); border-bottom:1px solid var(--separator); }
-    .titlebar{display:flex; align-items:center; gap:12px; padding:8px 10mm}
-    .title{font-size:18px;font-weight:800}
-    .spacer{flex:1}
-    .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
-    .btn-primary{background:var(--tint);color:#fff}
-    .btn-primary:hover{background:var(--tint-2)}
-    .btn-ghost{background:#fff;border:1px solid var(--separator)}
-
-    /* 內容 */
-    .grid{display:grid;grid-template-columns:1fr;gap:6mm}
-    .card{background:var(--card); border:1px solid var(--separator); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px}
-    .card h3{margin:0 0 12px;font-size:17px}
-
-    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-    label{font-size:13px;color:var(--secondary);display:block;margin-bottom:6px}
-    input[type="text"],input[type="number"],select{width:100%;padding:12px 14px;border:1px solid var(--separator);border-radius:12px;background:#fdfdfd;font-size:16px}
-    .btn-full{width:100%}
-	
-	/* 地圖 */
-    .map{height:126mm; border-radius:14px; overflow:hidden}
-    .map-card{background:var(--card); border:1px solid var(--separator); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px}
-    .map-subtitle{margin:0 0 8px; font-size:13px; color:#555;}
-    .map-head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px}
-    .map-actions{display:flex; gap:8px}
-
-    .summary-table-wrap{background:var(--card); border:1px solid var(--separator); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px}
-    .summary-title{font-weight:800;margin:0 0 8px; font-size:15px}
-    table.summary{width:100%; border-collapse:collapse; font-weight:700}
-    table.summary th, table.summary td{ border:1px solid var(--separator); padding:8px 10px; text-align:left; vertical-align:top;}
-    table.summary th{ background:#f7f7fa; color:#333; font-weight:800 }
-
-    .pill{display:inline-block; padding:.2em .6em; border-radius:999px; border:1px solid var(--separator); font-size:12px; margin-left:.5em}
-    .ok{ background:#e8fff3; border-color:#16a34a; color:#166534 }
-    .warn{ background:#fff7ed; border-color:#f59e0b; color:#92400e }
-    .no{ background:#fff1f2; border-color:#ef4444; color:#991b1b }
-
-    .page-title{font-weight:900; font-size:20px; margin:8px 0 8px 0}
-
-    /* 編輯區列印隱藏 */
-    #inputsCard{ transition: max-height .25s ease, padding .2s ease, margin .2s ease, border-width .2s ease; overflow:hidden }
-    #inputsCard.collapsed{ max-height:0; padding:0; margin:0; border-width:0; }
-    body.hide-editor #inputsCard{ display:none !important; }
-
-    /* 列印設定 */
-    @media print{
-      header{ display:none !important; }
-      .container{ max-width:210mm !important; padding:10mm !important; }
-      .grid{ gap:6mm !important; }
-      .map{ height:126mm !important; }
-      #inputsCard.collapsed{ display:none !important; }
-
-      /* 列印時隱藏操作按鈕 */
-      .map-actions,
-      #btnToggleEdit,
-      #btnConfirmEdit { display:none !important; }
-
-      /* ✅ 列印時隱藏提醒卡片，幫助塞進一頁 */
-      .policy--print-hide { display:none !important; }
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg-gradient: linear-gradient(135deg, #f3f4f6 0%, #e0e7ff 100%);
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.5);
+      --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --radius-lg: 24px;
+      --radius-md: 12px;
+      --accent-route: #ef4444; 
+      --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    /* Leaflet 標籤 */
-    .label-tooltip{background:#fff;border:1px solid rgba(0,0,0,.15);color:#111;padding:2px 6px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+    * { box-sizing: border-box; outline: none; }
+    
+    body {
+      margin: 0;
+      font-family: var(--font-family);
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
-    .badge { align:right; font-size: 12px; padding: 4px 8px; border: 1px solid #334155; border-radius: 999px; color: #334155;}
-    #btnPrintNow {background-color:red}
-    .ver { font-size:12px; color:#64748b; margin-left:8px;}
+    /* 頂部導航列 */
+    header {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      padding: 0.8rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01);
+    }
 
-    /* 政策提醒卡片 */
-    .policy h4{ margin:8px 0 6px; }
-    .policy ul{ margin:6px 0 10px 20px; padding:0; }
-    .policy li{ margin:4px 0; }
-    .muted{ color:#6b7280; font-weight:600; }
-    .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    @media (max-width: 768px){ .grid-2{ grid-template-columns:1fr; } }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--primary);
+    }
+    
+    .brand span { color: var(--text-main); font-weight: 600; font-size: 1rem; }
+    /* 增加權重以覆蓋 .brand span 的設定 */
+    .brand span.dev-tag {
+      font-size: 0.75rem;
+      color: #94a3b8 !important; /* 使用 Slate-400 確保在白色背景可讀但低調 */
+      font-weight: 400 !important;
+      margin-left: 12px;
+      padding-left: 12px;
+      border-left: 1px solid #cbd5e1;
+    }
+    .badge { 
+      background: #eff6ff; color: var(--primary); 
+      font-size: 0.75rem; padding: 4px 8px; 
+      border-radius: 99px; border: 1px solid #dbeafe; 
+    }
+
+    /* 主要容器 */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2rem;
+      width: 100%;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 2rem;
+    }
+
+    /* 左側面板 (控制區) */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* 卡片風格 (Glassmorphism) */
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--glass-shadow);
+      padding: 1.5rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    h2 { margin: 0 0 1rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main); display:flex; justify-content:space-between; align-items:center; }
+
+    /* 輸入表單優化 */
+    .location-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      position: relative; /* For connector line */
+    }
+
+    .location-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      position: relative;
+    }
+    
+    .location-input-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .custom-name-input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: #fff;
+    }
+    
+    .custom-name-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    
+    .custom-name-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .location-icon {
+      width: 24px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      z-index: 2;
+    }
+    
+    /* 連接線 */
+    .connector-line {
+      position: absolute;
+      left: 11px;
+      top: 24px;
+      bottom: -16px;
+      width: 2px;
+      background: #e5e7eb;
+      z-index: 1;
+    }
+    .location-group .location-row:last-child .connector-line { display: none; }
+
+    .input-wrapper {
+      flex: 1;
+      position: relative;
+    }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: var(--radius-md);
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: #fff;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    /* 自動完成下拉選單 - 卡片樣式優化 */
+    .autocomplete-items {
+      position: absolute;
+      border: 1px solid rgba(0,0,0,0.08);
+      z-index: 999;
+      top: calc(100% + 4px); /* 與輸入框保持一點距離 */
+      left: 0;
+      right: 0;
+      border-radius: 12px;
+      background-color: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      max-height: 280px;
+      overflow-y: auto;
+      display: none; /* 預設隱藏 */
+      animation: fadeIn 0.2s ease-out;
+    }
+    .autocomplete-items.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .autocomplete-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.1s;
+    }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover {
+      background-color: #f0f9ff;
+    }
+    .autocomplete-item strong { color: var(--text-main); font-weight: 600; }
+    .autocomplete-item small { color: #6b7280; font-size: 0.8rem; display: block; margin-top: 2px;}
+    .item-icon { color: #9ca3af; font-size: 1.1rem; }
+    .history-label {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        color: var(--primary);
+        font-weight: 700;
+        background: #eff6ff;
+        border-bottom: 1px solid #dbeafe;
+    }
+
+    .btn-action {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      font-size: 1rem;
+      transition: background 0.2s;
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-action:hover { background: var(--primary-hover); }
+
+    .btn-secondary {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .btn-secondary:hover { background: #f9fafb; }
+
+    .btn-remove {
+      color: #9ca3af;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .btn-remove:hover { color: #ef4444; }
+
+    .config-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .config-item label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    /* 右側地圖與摘要 */
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .map-container {
+      height: 500px;
+      width: 100%;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.05);
+      position: relative;
+    }
+    #map { width: 100%; height: 100%; }
+    
+    /* 自訂標記圖標樣式 */
+    .custom-marker-icon {
+        background: transparent !important;
+        border: none !important;
+    }
+    
+    /* 可拖動標記的游標樣式 */
+    .leaflet-marker-draggable {
+        cursor: move !important;
+    }
+    
+    /* 地圖路徑標註 */
+    .map-route-label {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-main);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      margin-bottom: 12px;
+    }
+
+    /* 摘要面板 */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    .stat-card {
+      background: #fff;
+      padding: 1rem;
+      border-radius: 16px;
+      text-align: center;
+      border: 1px solid #f3f4f6;
+    }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 4px 0;
+    }
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .stat-sub {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    /* 簽章欄位：網頁畫面中隱藏，僅列印時顯示 */
+    .sign-off-section {
+      display: none !important;
+    }
+
+    /* 列印專用樣式 - 專業公文版 */
+    @media print {
+      @page {
+        size: A4;
+        margin: 10mm; /* 設定邊界 */
+      }
+      
+      .dev-tag { display: none !important; }
+      
+      body {
+        background: white !important;
+        font-family: "PMingLiU", "MingLiU", "DFKai-SB", serif !important; /* 公文常用字體 */
+        color: #000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+      }
+
+      /* 隱藏網頁介面元素 */
+      header, .sidebar, .summary-grid, .btn-secondary, .btn-action, .loading-overlay, .leaflet-control-zoom, .leaflet-control-attribution, #mapDragHint { 
+        display: none !important; 
+      }
+      
+      /* 確保主容器撐滿寬度但移除 Flex */
+      .container { 
+        width: 100% !important; 
+        max-width: 100% !important; 
+        padding: 0 !important; 
+        margin: 0 !important;
+        display: block !important;
+      }
+      
+      .main-content {
+        display: block !important;
+        height: auto !important;
+        gap: 0 !important;
+      }
+
+      /* 1. 表格樣式：專業框線 */
+      .print-only-summary {
+        display: block !important;
+        margin-bottom: 5mm;
+        width: 100%;
+      }
+      
+      .print-only-summary h2 {
+        font-size: 20pt;
+        font-weight: bold;
+        text-align: center;
+        margin: 0 0 5mm 0;
+        padding-bottom: 2mm;
+        border-bottom: 3px double #000; /* 標題下方雙線 */
+      }
+      
+      /* 當顯示核章欄位時，縮小表格間距 */
+      body.show-sign-off .print-only-summary {
+        margin-bottom: 3mm !important;
+      }
+      
+      body.show-sign-off .print-only-summary h2 {
+        font-size: 18pt !important;
+        margin: 0 0 3mm 0 !important;
+        padding-bottom: 1mm !important;
+      }
+
+      .summary-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 2px solid #000; /* 外框加粗 */
+      }
+
+      .summary-table th, .summary-table td {
+        border: 1px solid #000;
+        padding: 8px 10px;
+        font-size: 12pt;
+        vertical-align: middle;
+      }
+      
+      /* 當顯示核章欄位時，縮小表格內部間距 */
+      body.show-sign-off .summary-table th, 
+      body.show-sign-off .summary-table td {
+        padding: 5px 8px !important;
+        font-size: 11pt !important;
+      }
+
+      .summary-table th {
+        background-color: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        font-weight: bold;
+        text-align: center;
+        width: 25%; /* 固定標題寬度 */
+      }
+      
+      .summary-table td {
+        text-align: left;
+      }
+
+      /* 特別強調總距離與費用 */
+      #sumDist, #sumRound {
+        font-weight: bold;
+      }
+
+      /* 2. 地圖樣式：固定高度確保出現且不換頁 */
+      .glass-card {
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+      }
+
+      .map-container {
+        display: block !important;
+        /* A4 高度約 297mm，扣除邊距(20) 表格(約80) 簽核(30)，地圖給 140mm 安全 */
+        height: 140mm !important; 
+        width: 100% !important;
+        border: 2px solid #000 !important; /* 地圖加框 */
+        margin-top: 5mm;
+        position: relative !important;
+        overflow: hidden !important;
+      }
+      
+      /* 當顯示核章欄位時，縮小地圖為90% */
+      body.show-sign-off .map-container {
+        height: 126mm !important; /* 140mm * 0.9 = 126mm */
+        margin-top: 3mm !important;
+      }
+
+      #map {
+        height: 100% !important;
+        width: 100% !important;
+        z-index: 0 !important;
+      }
+      
+      /* 列印時顯示路徑標註 */
+      .map-route-label {
+        display: block !important;
+        text-align: center !important;
+        background: white !important;
+        padding: 6px 16px !important;
+        border: 2px solid #000 !important;
+        border-radius: 4px !important;
+        font-size: 11pt !important;
+        font-weight: bold !important;
+        margin-bottom: 5mm !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      
+      /* 當顯示核章欄位時，縮小標註間距 */
+      body.show-sign-off .map-route-label {
+        margin-bottom: 3mm !important;
+        padding: 4px 12px !important;
+        font-size: 10pt !important;
+      }
+
+      /* 3. 核章區：置底或緊接 */
+      .sign-off-section {
+        display: none; /* 預設隱藏 */
+        margin-top: 10mm;
+        padding: 0 5mm;
+        justify-content: space-between;
+        font-size: 14pt;
+        font-family: "DFKai-SB", serif;
+      }
+      
+      body.show-sign-off .sign-off-section {
+        display: flex !important;
+        margin-top: 5mm !important;
+        font-size: 12pt !important;
+      }
+    }
+
+    .print-only-summary { display: none; }
+
+    /* RWD */
+    @media (max-width: 768px) {
+      .container { grid-template-columns: 1fr; padding: 1rem; }
+      .map-container { height: 350px; }
+      .summary-grid { grid-template-columns: 1fr; }
+    }
+    
+    /* Loading overlay */
+    .loading-overlay {
+        position: absolute; top:0; left:0; right:0; bottom:0;
+        background: rgba(255,255,255,0.7);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 100;
+        border-radius: var(--radius-lg);
+        display: none;
+    }
+    .spinner {
+        border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid var(--primary);
+        width: 24px; height: 24px; animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
   </style>
 </head>
-<body class="print-mode">
+<body>
+
   <header>
-    <div class="titlebar">
-      <div class="title">機關差旅費里程計算機</div>
-      <div class="subtitle">本計算機計算結果僅供參考，規劃路徑時不計交通狀況，並以最佳汽車路徑為規劃方向</div> <span class="badge">Developed by DennisZ</span>
-      <div class="spacer"></div>
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0-18 0"></path><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
+      里程計算機 <span>Pro</span>
+      <span class="dev-tag">Developed by DennisZ</span>
+    </div>
+    <div style="display:flex; gap:10px">
+        <!-- Header print button removed -->
     </div>
   </header>
 
   <div class="container">
-    <h1 class="page-title">機關所在地與出差地之路程計算</h1>
+    <!-- 左側控制面板 -->
+    <aside class="sidebar">
+      <div class="glass-card">
+        <h2>
+            行程規劃
+            <button id="addWaypointBtn" class="btn-secondary" style="font-size:0.75rem">+ 途經點</button>
+        </h2>
+        
+        <div class="location-group" id="locationsContainer">
+          <!-- 出發地 -->
+          <div class="location-row" data-type="origin">
+            <div class="location-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle></svg>
+                <div class="connector-line"></div>
+            </div>
+            <div class="location-input-group">
+              <div class="input-wrapper">
+                <input type="text" class="waypoint-input" placeholder="出發地點 (輸入搜尋...)" data-lat="" data-lng="">
+                <div class="autocomplete-items"></div>
+              </div>
+              <input type="text" class="custom-name-input" placeholder="自訂名稱 (選填)" data-custom-name="">
+            </div>
+          </div>
 
-    <section class="grid">
-      <!-- 編輯區 -->
-      <div class="card" id="inputsCard">
-        <h3>輸入地點</h3>
-        <div class="form-row">
-          <div>
-            <label>出發地點</label>
-            <input id="origin" type="text" placeholder="輸入出發地名…">
-            <label style="margin-top:8px">自訂出發地名稱（可空白）</label>
-            <input id="originAlias" type="text" placeholder="例如：公司、家裡、XX校區…">
-          </div>
-          <div>
-            <label>目的地點</label>
-            <input id="destination" type="text" placeholder="輸入目的地名…">
-            <label style="margin-top:8px">自訂目的地名稱（可空白）</label>
-            <input id="destAlias" type="text" placeholder="例如：客戶A、分部、XX場館…">
-          </div>
-        </div>
-        <div class="form-row">
-          <div>
-            <label>每公里燃油費（元）</label>
-            <input id="fuelPrice" type="number" min="0" step="0.1" value="3">
-          </div>
-          <div>
-            <label>出差性質</label>
-            <select id="tripType">
-              <option value="general">一般出差</option>
-              <option value="training">訓練／講習（各類研習、座談、研討、觀摩、說明會等）</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div>
-            <label>總距離計算位數（影響費用計算）</label>
-            <select id="decimalPlaces">
-              <option value="0">整數（無小數點）</option>
-              <option value="1" selected>小數點第一位（預設）</option>
-              <option value="2">小數點第二位</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div style="display:flex;align-items:flex-end;gap:10px">
-            <button id="btn-calc" class="btn btn-primary btn-primary">計算最佳路線與費用</button>
-            <button id="btnPrintNow" class="btn btn-primary">超友善列印</button>
+          <!-- 目的地 -->
+          <div class="location-row" data-type="dest">
+            <div class="location-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            </div>
+            <div class="location-input-group">
+              <div class="input-wrapper">
+                <input type="text" class="waypoint-input" placeholder="目的地點 (輸入搜尋...)" data-lat="" data-lng="">
+                <div class="autocomplete-items"></div>
+              </div>
+              <input type="text" class="custom-name-input" placeholder="自訂名稱 (選填)" data-custom-name="">
+            </div>
           </div>
         </div>
 
-        <div class="history" id="historyBox" style="display:none">
-          <h4>歷史地點（點擊可填入目前聚焦欄位）</h4>
-          <div class="chips" id="historyChips"></div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>交通工具</label>
+                <select id="vehicleType">
+                    <option value="car">汽車 (3 元/公里)</option>
+                    <option value="motorcycle">機車 (2 元/公里)</option>
+                    <option value="custom">自訂</option>
+                </select>
+            </div>
+            <div class="config-item">
+                <label>小數位數</label>
+                <select id="decimalPlaces">
+                    <option value="0">整數</option>
+                    <option value="1" selected>1位</option>
+                    <option value="2">2位</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="config-item" id="customFuelContainer" style="margin-top:10px; display:none;">
+            <label>自訂費用 (元/公里)</label>
+            <input type="number" id="fuelPrice" value="3.0" step="0.1">
+        </div>
+        
+        <div class="config-item" style="margin-top:10px">
+             <label>出差性質</label>
+             <select id="tripType">
+                  <option value="general">一般出差</option>
+                  <option value="training">訓練／講習 (無雜費)</option>
+             </select>
+        </div>
+
+        <div class="config-item" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="showSignOff" style="width:auto; margin:0;">
+            <label style="margin:0; cursor:pointer;" for="showSignOff">顯示列印核章欄位</label>
+        </div>
+
+        <button id="btnCalc" class="btn-action">
+            計算最佳路徑與費用
+        </button>
+
+        <!-- 新增：紅色列印按鈕 -->
+        <button onclick="window.print()" class="btn-action" style="background:var(--accent-route); margin-top:10px;">
+            🖨️ 列印報告書
+        </button>
+        <p style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-top:8px;">
+            圖資來源：OpenStreetMap & OSRM
+        </p>
+      </div>
+
+      <div class="glass-card" style="display:none">
+          <h2>最近使用的地點</h2>
+          <div id="historyChips" style="display:flex; flex-wrap:wrap; gap:8px;">
+              <!-- History JS will populate this -->
+              <span style="font-size:0.8rem; color:#999">暫無紀錄</span>
+          </div>
+      </div>
+    </aside>
+
+    <!-- 右側主要內容 -->
+    <main class="main-content">
+
+      <!-- 列印專用區域 (還原原版配置) - 移至最上方 -->
+      <div class="print-only-summary">
+          <h2>機關差旅路徑費用報告書</h2>
+          <table class="summary-table">
+            <tbody>
+              <tr>
+                <th>出發地</th>
+                <th>目的地</th>
+                <th>總距離</th>
+              </tr>
+              <tr>
+                <td id="sumOrigin">—</td>
+                <td id="sumDest">—</td>
+                <td id="sumDist">—</td>
+              </tr>
+              <tr>
+                <th>每公里費用</th>
+                <th>單程費用</th>
+                <th>往返費用</th>
+              </tr>
+              <tr>
+                <td id="sumPerKm">—</td>
+                <td id="sumOne">—</td>
+                <td id="sumRound">—</td>
+              </tr>
+              <tr>
+                <th>可報雜支</th>
+                <th>可報住宿</th>
+                <th>出差性質</th>
+              </tr>
+              <tr>
+                <td id="sumMisc">—</td>
+                <td id="sumLodge">—</td>
+                <td id="sumType">—</td>
+              </tr>
+            </tbody>
+          </table>
+      </div>
+      
+      <!-- 統計卡片 -->
+      <div class="summary-grid">
+        <div class="stat-card">
+          <div class="stat-label">總距離 (單程)</div>
+          <div class="stat-value" id="valDist">—</div>
+          <div class="stat-sub">公里</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">單程費用</div>
+          <div class="stat-value" style="color:var(--primary)" id="valCostOne">—</div>
+          <div class="stat-sub">新台幣 (元)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">往返總費用</div>
+          <div class="stat-value" style="color:#ef4444" id="valCostRound">—</div>
+          <div class="stat-sub">新台幣 (元)</div>
         </div>
       </div>
 
-      <!-- 摘要表格 -->
-      <div class="summary-table-wrap" id="summaryWrap">
-        <p class="summary-title">出差距離費用計算：</p>
-        <table class="summary">
-          <tbody>
-            <tr>
-              <th>出發地</th>
-              <th>目的地</th>
-              <th>總距離</th>
-            </tr>
-            <tr>
-              <td id="sumOrigin">—</td>
-              <td id="sumDest">—</td>
-              <td id="sumDist">—</td>
-            </tr>
-            <tr>
-              <th>每公里費用</th>
-              <th>單程費用</th>
-              <th>往返費用</th>
-            </tr>
-            <tr>
-              <td id="sumPerKm">—</td>
-              <td id="sumOne">—</td>
-              <td id="sumRound">—</td>
-            </tr>
-            <tr>
-              <th>可報雜支</th>
-              <th>可報住宿</th>
-              <th>出差性質</th>
-            </tr>
-            <tr>
-              <td id="sumMisc">—</td>
-              <td id="sumLodge">—</td>
-              <td id="sumType">—</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- 政策提示 (動態) -->
+      <div class="glass-card" style="padding: 1rem; border-left: 4px solid var(--primary); display:none" id="policyAlert">
+          <div style="font-size:0.9rem; font-weight:700; margin-bottom:4px">補助試算提示</div>
+          <div id="policyText" style="font-size:0.85rem; color:#4b5563; line-height:1.5"></div>
       </div>
 
       <!-- 地圖 -->
-      <div class="map-card" id="mapCard">
-        <div class="map-head">
-          <!-- ✅ 標題改為 Google 地圖對應之最短路徑 -->
-          <h4 class="map-subtitle">Google 地圖對應之最短路徑</h4>
-          <div class="map-actions">
-            <button id="btnToggleEdit" class="btn btn-ghost" title="拖曳地圖上的別針以微調位置">微調地點</button>
-            <button id="btnConfirmEdit" class="btn btn-primary" style="display:none" title="重新計算里程與費用">確認更新</button>
-          </div>
+      <div class="glass-card" style="padding:0; border:none;">
+        <div class="map-route-label" id="mapRouteLabel" style="display:none;">
+          Google 地圖對應之最短路徑
         </div>
-        <div id="map" class="map"></div>
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="loading-overlay" id="mapLoading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        <div style="text-align: center; padding: 8px; font-size: 0.75rem; color: var(--text-muted); display: none;" id="mapDragHint">
+          💡 提示：可拖動地圖上的標記來微調地點位置
+        </div>
       </div>
 
-      <!-- 提醒／政策（列印時隱藏） -->
-      <div class="card policy policy--print-hide">
-        <h3>其他資訊提醒（報支規定摘要）</h3>
-        <div class="grid-2">
-          <div>
-            <h4>交通工具／報支方式</h4>
-            <ul>
-              <li><b>飛機</b>：限經濟艙；<span class="muted">檢附票根或購票證明（當日往返免附）</span></li>
-              <li><b>高鐵／火車／分等之船舶</b>：限標準車廂（陪同市長、副市長者除外）</li>
-              <li><b>公民營客運汽車</b>：依實支覈實</li>
-              <li><b>自用／租賃(含共享) 汽機車</b>：汽車 3 元/公里、機車 2 元/公里
-                <span class="muted">（不得另報油料、過路(橋)、停車等）</span>；請附 Google Map
-              </li>
-              <li><b>專備交通工具／免費票／便車</b>：不得報支</li>
-            </ul>
-            <h4>交通費</h4>
-            <ul>
-              <li>包含飛機、高鐵、火車、船舶、汽車、捷運、公共自行車等，均覈實報支</li>
-              <li>上限以「機關所在地 ↔ 出差地」必要路程計算</li>
-            </ul>
-          </div>
-          <div>
-            <h4>雜費</h4>
-            <ul>
-              <li>單程 <b>&gt;= 60 公里</b>：每日 <b>300 元</b></li>
-              <li>單程 <b>5–60 公里(含)</b>：每日 <b>120 元</b></li>
-              <li>單程 <b>&lt; 5 公里</b>：<b>不支給</b></li>
-              <li><b>訓練／講習</b>（研習、座談、研討、觀摩、說明會等）：<b>不補助雜費</b></li>
-            </ul>
-            <h4>住宿費</h4>
-            <ul>
-              <li>出差地距學校所在地 <b>&gt;= 60 公里</b> 且有住宿事實者，檢據覈實報支</li>
-              <li>上限：<b>平日 3,500 元／日</b>、<b>假日 4,500 元／日</b>（假日含放假日前一天，不含最後一天）</li>
-            </ul>
-            <h4>訓練／講習費用補助要點</h4>
-            <ul>
-              <li>交通費、住宿費依「國內出差旅費報支要點」；<b>訓練機構已提供交通或住宿者不予補助</b></li>
-            </ul>
-            <div class="muted">報支請本誠信原則，就實際支付及出差履行真實性負責。</div>
-          </div>
-        </div>
+      <div class="sign-off-section" id="signOffSection">
+          <div>申請人簽章：________________</div>
+          <div>單位主管簽章：________________</div>
       </div>
-    </section>
+
+    </main>
   </div>
 
   <script>
-    // ===== 地圖與狀態 =====
-    const map = L.map('map', { zoomAnimation:false }).setView([23.7, 120.9], 7);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', crossOrigin:true }).addTo(map);
+    // ===== 初始化地圖 =====
+    const map = L.map('map').setView([23.6, 120.9], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-    let markers = [], routePolyline = null, waypoints = { origin:null, dest:null };
-    let lastFocused = 'origin';
-    let editMode = false;
-    const btnToggleEdit = document.getElementById('btnToggleEdit');
-    const btnConfirmEdit = document.getElementById('btnConfirmEdit');
+    let routeLayer = null;
+    let markers = [];
+    let currentPoints = []; // 保存當前的點位資料，用於拖動後重新計算
 
-    document.getElementById('origin').addEventListener('focus', ()=> lastFocused='origin');
-    document.getElementById('destination').addEventListener('focus', ()=> lastFocused='destination');
+    // ===== 狀態管理 =====
+    const state = {
+        waypoints: [], // Array of {lat, lng, name}
+        history: JSON.parse(localStorage.getItem('trip_calc_history') || '[]')
+    };
 
-    window.addEventListener('load', ()=> setTimeout(()=> map.invalidateSize({animate:false}), 0));
+    // ===== DOM 元素 =====
+    const locationsContainer = document.getElementById('locationsContainer');
+    const addWaypointBtn = document.getElementById('addWaypointBtn');
+    
+    // ===== 1. 動態途經點功能 =====
+    addWaypointBtn.addEventListener('click', () => {
+        const destRow = locationsContainer.lastElementChild;
+        
+        const newRow = document.createElement('div');
+        newRow.className = 'location-row';
+        newRow.dataset.type = 'waypoint';
+        newRow.innerHTML = 
+            `<div class="location-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle></svg>
+                <div class="connector-line"></div>
+            </div>
+            <div class="location-input-group">
+              <div class="input-wrapper">
+                <input type="text" class="waypoint-input" placeholder="途經點 (輸入搜尋...)" data-lat="" data-lng="">
+                <div class="autocomplete-items"></div>
+              </div>
+              <input type="text" class="custom-name-input" placeholder="自訂名稱 (選填)" data-custom-name="">
+            </div>
+            <button class="btn-remove" onclick="this.parentElement.remove()" title="移除此點">✕</button>
+        `;
+        
+        locationsContainer.insertBefore(newRow, destRow);
+        setupAutocomplete(newRow.querySelector('input'));
+    });
 
-    // ===== 地點歷史（localStorage） =====
-    const STORAGE_KEY = 'fuelcalc_places_v145';
-    function loadHistory(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); }catch(e){ return []; } }
-    function saveHistory(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
-    function upsertPlace(place){ const list = loadHistory(); const idx = list.findIndex(p=> Math.abs(p.lat - place.lat) < 1e-6 && Math.abs(p.lng - place.lng) < 1e-6); if(idx>=0) list[idx] = { ...list[idx], ...place, ts: Date.now() }; else list.unshift({ ...place, ts: Date.now() }); saveHistory(list.slice(0,20)); renderHistory(); }
-    function renderHistory(){ const chips = document.getElementById('historyChips'); const box = document.getElementById('historyBox'); const list = loadHistory(); chips.innerHTML=''; if(!list.length){ box.style.display='none'; return;} list.forEach(p=>{ const btn = document.createElement('button'); btn.className='tag'; btn.title = `${p.displayName} (${p.lat.toFixed(5)}, ${p.lng.toFixed(5)})`; btn.textContent = p.customName || p.displayName.split(',')[0]; btn.addEventListener('click', ()=>{ const targetId = lastFocused === 'origin' ? 'origin' : 'destination'; document.getElementById(targetId).value = p.displayName; if(targetId==='origin') waypoints.origin = {lat:p.lat, lng:p.lng}; else waypoints.dest = {lat:p.lat, lng:p.lng}; }); chips.appendChild(btn); }); box.style.display='block'; }
+    // ===== 2. 自動完成 (Autocomplete) & 歷史紀錄整合 =====
+    let debounceTimer;
+    
+    function setupAutocomplete(input) {
+        const list = input.nextElementSibling; // .autocomplete-items
+
+        // 輔助函式：顯示歷史紀錄選單
+        const showHistoryDropdown = () => {
+            list.innerHTML = '';
+            if (state.history.length === 0) return;
+
+            // 加入標題
+            const header = document.createElement('div');
+            header.className = 'history-label';
+            header.textContent = '🕒 最近使用的地點';
+            list.appendChild(header);
+
+            state.history.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+                div.innerHTML = `
+                    <span class="item-icon">↺</span>
+                    <div>
+                        <strong>${item.name}</strong>
+                    </div>
+                `;
+                div.addEventListener('click', function(e) {
+                    e.stopPropagation(); // 阻止冒泡
+                    input.value = item.name;
+                    input.dataset.lat = item.lat;
+                    input.dataset.lng = item.lng;
+                    input.dataset.fullAddress = item.name;
+                    closeAllLists();
+                });
+                list.appendChild(div);
+            });
+            list.classList.add('active');
+        };
+
+        // 事件：獲得焦點時，若無內容則顯示歷史紀錄
+        input.addEventListener('focus', function() {
+            window.currentFocusedInput = this;
+            if (!this.value.trim()) {
+                showHistoryDropdown();
+            }
+        });
+
+        // 事件：輸入內容時查詢 API
+        input.addEventListener('input', function(e) {
+            const val = this.value;
+            
+            // 清空舊座標
+            this.dataset.lat = '';
+            this.dataset.lng = '';
+            
+            if (!val.trim()) {
+                showHistoryDropdown(); // 清空後顯示歷史
+                return;
+            }
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&addressdetails=1&countrycodes=tw&limit=5`)
+                    .then(r => r.json())
+                    .then(data => {
+                        list.innerHTML = '';
+                        if(data.length === 0) {
+                            list.classList.remove('active');
+                            return;
+                        }
+                        
+                        data.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'autocomplete-item';
+                            
+                            let displayName = item.display_name;
+                            const parts = displayName.split(', ');
+                            if (parts.length > 2) displayName = parts.slice(0, 3).join(', ');
+
+                            div.innerHTML = `
+                                <span class="item-icon">📍</span>
+                                <div>
+                                    <strong>${item.name || parts[0]}</strong>
+                                    <small>${displayName}</small>
+                                </div>
+                            `;
+                            div.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                input.value = item.name || parts[0];
+                                input.dataset.lat = item.lat;
+                                input.dataset.lng = item.lon;
+                                input.dataset.fullAddress = item.display_name;
+                                addToHistory({name: input.value, lat: item.lat, lng: item.lon});
+                                closeAllLists();
+                            });
+                            list.appendChild(div);
+                        });
+                        list.classList.add('active');
+                    });
+            }, 300);
+        });
+        
+        // 點擊卡片外部關閉
+        document.addEventListener('click', function(e) {
+            if (e.target !== input && !list.contains(e.target)) {
+                list.classList.remove('active');
+            }
+        });
+    }
+
+    function closeAllLists(elmnt) {
+        const items = document.getElementsByClassName("autocomplete-items");
+        for (let i = 0; i < items.length; i++) {
+             items[i].classList.remove('active');
+             // items[i].innerHTML = ""; // Don't clear immediately to allow fade out if we add transition later
+        }
+    }
+
+    // 為既有的輸入框綁定
+    document.querySelectorAll('.waypoint-input').forEach(setupAutocomplete);
+
+
+    // ===== 3. 計算核心 =====
+    document.getElementById('btnCalc').addEventListener('click', async () => {
+        const inputs = Array.from(document.querySelectorAll('.waypoint-input'));
+        const points = [];
+        
+        document.getElementById('mapLoading').style.display = 'flex';
+        document.getElementById('mapRouteLabel').style.display = 'none'; // 隱藏標註直到路徑繪製完成
+        const dragHint = document.getElementById('mapDragHint');
+        if (dragHint) dragHint.style.display = 'none'; // 隱藏提示直到路徑繪製完成
+
+        // 驗證並收集座標
+        for (let input of inputs) {
+            let lat = input.dataset.lat;
+            let lng = input.dataset.lng;
+            const name = input.value.trim();
+
+            if (!name) continue; // 跳過空欄位
+
+            // 取得自訂名稱（如果有的話）
+            const locationRow = input.closest('.location-row');
+            const customNameInput = locationRow ? locationRow.querySelector('.custom-name-input') : null;
+            const customName = customNameInput ? customNameInput.value.trim() : '';
+
+            // 如果有文字但沒座標 (使用者手打未選選單)，嘗試自動搜尋第一個結果
+            if (name && (!lat || !lng)) {
+                try {
+                    const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name)}&limit=1`);
+                    const data = await resp.json();
+                    if (data && data.length > 0) {
+                        lat = data[0].lat;
+                        lng = data[0].lon;
+                        input.dataset.lat = lat;
+                        input.dataset.lng = lng;
+                    } else {
+                        alert(`找不到地點：${name}`);
+                        document.getElementById('mapLoading').style.display = 'none';
+                        document.getElementById('mapRouteLabel').style.display = 'none';
+                        if (dragHint) dragHint.style.display = 'none';
+                        return;
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            
+            if (lat && lng) {
+                points.push({ 
+                    lat: parseFloat(lat), 
+                    lng: parseFloat(lng), 
+                    name: name,  // 原始名稱（用於地圖標記）
+                    displayName: customName || name  // 顯示名稱（用於表格和標註）
+                });
+                // 確保計算時也嘗試將有效地點加入歷史 (避免漏網之魚)
+                addToHistory({name: name, lat: lat, lng: lng});
+            }
+        }
+
+        if (points.length < 2) {
+            alert('請至少輸入出發地與目的地');
+            document.getElementById('mapLoading').style.display = 'none';
+            document.getElementById('mapRouteLabel').style.display = 'none';
+            if (dragHint) dragHint.style.display = 'none';
+            return;
+        }
+
+        // 呼叫 OSRM
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${points.map(p => `${p.lng},${p.lat}`).join(';')}?overview=full&geometries=geojson`;
+        
+        fetch(osrmUrl)
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('mapLoading').style.display = 'none';
+                if (data.code !== 'Ok') {
+                    document.getElementById('mapRouteLabel').style.display = 'none';
+                    const dragHintErr = document.getElementById('mapDragHint');
+                    if (dragHintErr) dragHintErr.style.display = 'none';
+                    alert('路徑規劃失敗，請檢查地點是否可行 (例如跨海)');
+                    return;
+                }
+
+                const route = data.routes[0];
+                const distanceKm = route.distance / 1000;
+                
+                // 保存當前的點位資料
+                currentPoints = points.map(p => ({ ...p }));
+                
+                renderMapRoute(route.geometry, points);
+                updateSummary(distanceKm, points);
+            })
+            .catch(err => {
+                document.getElementById('mapLoading').style.display = 'none';
+                document.getElementById('mapRouteLabel').style.display = 'none';
+                const dragHintErr = document.getElementById('mapDragHint');
+                if (dragHintErr) dragHintErr.style.display = 'none';
+                alert('連線錯誤');
+                console.error(err);
+            });
+    });
+
+    // 重新計算路徑（當標記被拖動時調用）
+    async function recalculateRoute() {
+        if (currentPoints.length < 2) return;
+        
+        document.getElementById('mapLoading').style.display = 'flex';
+        
+        // 呼叫 OSRM
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${currentPoints.map(p => `${p.lng},${p.lat}`).join(';')}?overview=full&geometries=geojson`;
+        
+        try {
+            const resp = await fetch(osrmUrl);
+            const data = await resp.json();
+            
+            document.getElementById('mapLoading').style.display = 'none';
+            
+            if (data.code !== 'Ok') {
+                console.warn('路徑規劃失敗，使用直線路徑');
+                // 如果路徑規劃失敗，繪製直線連接
+                const directLine = {
+                    type: 'LineString',
+                    coordinates: currentPoints.map(p => [p.lng, p.lat])
+                };
+                renderMapRoute(directLine, currentPoints);
+                // 計算直線距離
+                let totalDistance = 0;
+                for (let i = 0; i < currentPoints.length - 1; i++) {
+                    const p1 = currentPoints[i];
+                    const p2 = currentPoints[i + 1];
+                    const dist = Math.sqrt(
+                        Math.pow((p2.lat - p1.lat) * 111, 2) + 
+                        Math.pow((p2.lng - p1.lng) * 111 * Math.cos(p1.lat * Math.PI / 180), 2)
+                    );
+                    totalDistance += dist;
+                }
+                updateSummary(totalDistance, currentPoints);
+                return;
+            }
+
+            const route = data.routes[0];
+            const distanceKm = route.distance / 1000;
+            
+            renderMapRoute(route.geometry, currentPoints);
+            updateSummary(distanceKm, currentPoints);
+        } catch (err) {
+            document.getElementById('mapLoading').style.display = 'none';
+            console.error('重新計算路徑錯誤', err);
+        }
+    }
+
+    function renderMapRoute(geojson, points) {
+        // 清除舊圖層
+        if (routeLayer) map.removeLayer(routeLayer);
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+
+        // 繪製路線
+        routeLayer = L.geoJSON(geojson, {
+            style: { color: '#ef4444', weight: 6, opacity: 0.8 }
+        }).addTo(map);
+
+        // 繪製可拖動標記（使用自訂名稱或原始名稱）
+        points.forEach((p, idx) => {
+            const isStart = idx === 0;
+            const isEnd = idx === points.length - 1;
+            let color = isStart ? '#22c55e' : (isEnd ? '#ef4444' : '#f59e0b');
+            
+            // 創建自訂圓形圖標
+            const displayName = p.displayName || p.name;
+            const icon = L.divIcon({
+                className: 'custom-marker-icon',
+                html: `<div style="
+                    width: 16px; 
+                    height: 16px; 
+                    border-radius: 50%; 
+                    background-color: ${color}; 
+                    border: 2px solid white; 
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                "></div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+            
+            // 創建可拖動的標記
+            const marker = L.marker([p.lat, p.lng], {
+                icon: icon,
+                draggable: true  // 啟用拖動功能
+            }).bindTooltip(displayName, {permanent: true, direction: 'top', offset: [0, -10]}).addTo(map);
+            
+            // 添加拖動事件監聽器
+            marker.on('dragend', function(e) {
+                const newLat = e.target.getLatLng().lat;
+                const newLng = e.target.getLatLng().lng;
+                
+                // 更新 currentPoints 中的座標
+                if (currentPoints[idx]) {
+                    currentPoints[idx].lat = newLat;
+                    currentPoints[idx].lng = newLng;
+                }
+                
+                // 更新對應的輸入框座標
+                const inputs = Array.from(document.querySelectorAll('.waypoint-input'));
+                if (inputs[idx]) {
+                    inputs[idx].dataset.lat = newLat;
+                    inputs[idx].dataset.lng = newLng;
+                }
+                
+                // 重新計算路徑
+                recalculateRoute();
+            });
+            
+            markers.push(marker);
+        });
+
+        // 顯示路徑標註（使用自訂名稱或原始名稱）
+        const routeLabel = document.getElementById('mapRouteLabel');
+        if (points.length >= 2) {
+            const startName = points[0].displayName || points[0].name;
+            const endName = points[points.length - 1].displayName || points[points.length - 1].name;
+            routeLabel.textContent = `Google 地圖對應之最短路徑：${startName} → ${endName}`;
+        }
+        routeLabel.style.display = 'block';
+        
+        // 顯示拖動提示
+        const dragHint = document.getElementById('mapDragHint');
+        if (dragHint) {
+            dragHint.style.display = 'block';
+        }
+
+        map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+    }
+
+    function updateSummary(km, points) {
+        const places = parseInt(document.getElementById('decimalPlaces').value);
+        const fuel = parseFloat(document.getElementById('fuelPrice').value);
+        const tripType = document.getElementById('tripType').value;
+        
+        // 計算邏輯
+        const multiplier = Math.pow(10, places);
+        const roundedDist = Math.round(km * multiplier) / multiplier;
+        const oneWayCost = Math.round(roundedDist * fuel);
+        const roundTripCost = oneWayCost * 2;
+
+        // 更新 UI
+        document.getElementById('valDist').textContent = roundedDist.toFixed(places);
+        document.getElementById('valCostOne').textContent = oneWayCost.toLocaleString();
+        document.getElementById('valCostRound').textContent = roundTripCost.toLocaleString();
+
+        // 政策提示邏輯 (螢幕顯示)
+        const policyEl = document.getElementById('policyAlert');
+        const policyText = document.getElementById('policyText');
+        policyEl.style.display = 'block';
+        
+        let msg = [];
+        let miscHtml = '';
+        let lodgeHtml = '';
+
+        if (tripType === 'training') {
+            msg.push('⛔ <b>訓練／講習</b>：通常不可報支雜費。');
+            miscHtml = '不可報（訓練/講習）';
+        } else {
+            if (roundedDist >= 60) {
+                msg.push('✅ 單程滿 60 公里：可報雜費 400 元/日，若有住宿事實可報住宿費。');
+                miscHtml = '可報 400 元/日';
+            } else if (roundedDist >= 5) {
+                msg.push('✅ 單程 5~60 公里：可報雜費 120 元/日。');
+                miscHtml = '可報 120 元/日';
+            } else {
+                msg.push('⚠️ 單程未滿 5 公里：不可報支雜費。');
+                miscHtml = '不可報（未達5公里）';
+            }
+        }
+
+        if (roundedDist >= 60) {
+            lodgeHtml = '可報（需憑據，上限：平日3,500元/假日4,500元）';
+            if (tripType !== 'training') {
+                msg.push('🏨 <b>住宿費</b>：有住宿事實者，檢據覈實報支。上限：平日 3,500 元/日，假日 4,500 元/日。');
+            }
+        } else {
+            lodgeHtml = '原則不可報';
+        }
+        // 加入交通工具說明
+        const vehicleType = document.getElementById('vehicleType').value;
+        let vehicleNote = '';
+        if (vehicleType === 'car') {
+            vehicleNote = '🚗 <b>交通工具</b>：駕駛自用或租賃（含共享）汽車，3 元/公里（不得另報油料、過路(橋)、停車等費用），請附 Google Map。';
+        } else if (vehicleType === 'motorcycle') {
+            vehicleNote = '🏍️ <b>交通工具</b>：駕駛自用或租賃（含共享）機車，2 元/公里（不得另報油料、過路(橋)、停車等費用），請附 Google Map。';
+        }
+        if (vehicleNote) {
+            msg.push(vehicleNote);
+        }
+        
+        policyText.innerHTML = msg.join('<br>');
+
+        // 更新列印用原版表格 (3x3) - 使用自訂名稱或原始名稱
+        const startDisplayName = points[0].displayName || points[0].name;
+        document.getElementById('sumOrigin').textContent = startDisplayName;
+        
+        // 目的地欄位：若有途經點則標註（使用自訂名稱或原始名稱）
+        const midPoints = points.slice(1, -1).map(p => p.displayName || p.name);
+        const endDisplayName = points[points.length-1].displayName || points[points.length-1].name;
+        let destText = endDisplayName;
+        if (midPoints.length > 0) {
+            destText += ` (經由: ${midPoints.join('、')})`;
+        }
+        document.getElementById('sumDest').textContent = destText;
+        
+        document.getElementById('sumDist').textContent = `${roundedDist.toFixed(places)} 公里 (來回: ${(roundedDist*2).toFixed(places)})`;
+        
+        // 更新每公里費用，加入交通工具類型說明
+        let vehicleLabel = '';
+        if (vehicleType === 'car') {
+            vehicleLabel = '汽車 ';
+        } else if (vehicleType === 'motorcycle') {
+            vehicleLabel = '機車 ';
+        }
+        document.getElementById('sumPerKm').textContent = vehicleLabel + fuel + ' 元/公里';
+        
+        document.getElementById('sumOne').textContent = oneWayCost.toLocaleString() + ' 元';
+        document.getElementById('sumRound').textContent = roundTripCost.toLocaleString() + ' 元';
+        document.getElementById('sumMisc').textContent = miscHtml;
+        document.getElementById('sumLodge').textContent = lodgeHtml;
+        document.getElementById('sumType').textContent = (tripType === 'training' ? '訓練／講習' : '一般出差');
+    }
+
+    // ===== 歷史紀錄功能 =====
+    function addToHistory(place) {
+        // 檢查是否已存在 (避免重複)
+        const idx = state.history.findIndex(h => h.name === place.name);
+        if (idx !== -1) {
+            // 如果已存在，先移除舊的 (稍後加到最前面，變成最近使用)
+            state.history.splice(idx, 1);
+        }
+        
+        // 加到最前面
+        state.history.unshift(place);
+        
+        // 限制數量 (例如只留最近 10 筆)
+        if (state.history.length > 10) {
+            state.history.pop();
+        }
+        
+        // 存入 LocalStorage
+        localStorage.setItem('trip_calc_history', JSON.stringify(state.history));
+    }
+
+    // ===== 交通工具選項處理 =====
+    const vehicleTypeSelect = document.getElementById('vehicleType');
+    const customFuelContainer = document.getElementById('customFuelContainer');
+    const fuelPriceInput = document.getElementById('fuelPrice');
+    
+    vehicleTypeSelect.addEventListener('change', function() {
+        if (this.value === 'car') {
+            fuelPriceInput.value = '3.0';
+            customFuelContainer.style.display = 'none';
+        } else if (this.value === 'motorcycle') {
+            fuelPriceInput.value = '2.0';
+            customFuelContainer.style.display = 'none';
+        } else {
+            customFuelContainer.style.display = 'block';
+        }
+    });
+    
+    // 初始化時設定預設值
+    vehicleTypeSelect.dispatchEvent(new Event('change'));
+
+    // ===== 列印相關設定 =====
+    const showSignOffCheckbox = document.getElementById('showSignOff');
+    showSignOffCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            document.body.classList.add('show-sign-off');
+        } else {
+            document.body.classList.remove('show-sign-off');
+        }
+    });
+
+    window.onbeforeprint = () => {
+        map.invalidateSize(); // 確保地圖尺寸正確
+    };
+
+    function renderHistory() {
+        const container = document.getElementById('historyChips');
+        if (state.history.length === 0) return;
+        
+        container.innerHTML = '';
+        state.history.forEach(h => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-secondary';
+            btn.style.fontSize = '0.8rem';
+            btn.textContent = h.name;
+            btn.onclick = () => {
+                if (window.currentFocusedInput) {
+                    window.currentFocusedInput.value = h.name;
+                    window.currentFocusedInput.dataset.lat = h.lat;
+                    window.currentFocusedInput.dataset.lng = h.lng;
+                    // Trigger input event to simulate user action (optional)
+                } else {
+                    // Default to Origin if nothing focused
+                    const originInput = document.querySelector('input[data-type="origin"] .waypoint-input'); // fix selector logic if needed
+                    // Simplified: just alert user
+                    alert('請先點選一個輸入框，再點擊歷史地點');
+                }
+            };
+            container.appendChild(btn);
+        });
+    }
     renderHistory();
 
-    // ===== Geocode =====
-    function geocode(name){ return fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(name)}`).then(r=>r.json()).then(arr=>arr[0]); }
-
-    function clearRoute(){ if(markers.length){markers.forEach(m=>map.removeLayer(m)); markers=[];} if(routePolyline){ map.removeLayer(routePolyline); routePolyline=null; } }
-    function clearSummary(){
-      document.getElementById('sumOrigin').textContent = '—';
-      document.getElementById('sumDest').textContent   = '—';
-      document.getElementById('sumDist').textContent   = '—';
-      document.getElementById('sumOne').textContent    = '—';
-      document.getElementById('sumRound').textContent  = '—';
-      document.getElementById('sumPerKm').textContent  = '—';
-      document.getElementById('sumMisc').textContent   = '—';
-      document.getElementById('sumLodge').textContent  = '—';
-      document.getElementById('sumType').textContent   = '—';
-    }
-
-    function addMarkerWithLabel(lat, lng, label, opts={}){
-      const m = L.marker([lat, lng], { draggable: !!opts.draggable }).addTo(map);
-      if(label){ m.bindTooltip(label, { permanent:true, direction:'top', offset:[0,-10], className:'label-tooltip' }).openTooltip(); }
-      m._role = opts.role || null;
-      if(opts.draggable && m.dragging){ m.dragging.enable(); }
-      m.on('dragend', (e)=>{
-        const ll = e.target.getLatLng();
-        if(e.target._role === 'origin') waypoints.origin = {lat: ll.lat, lng: ll.lng};
-        if(e.target._role === 'dest')   waypoints.dest   = {lat: ll.lat, lng: ll.lng};
-      });
-      return m;
-    }
-
-    function applyMarkerDraggable(draggable){
-      markers.forEach(m=>{ if(m.dragging){ draggable ? m.dragging.enable() : m.dragging.disable(); } });
-    }
-
-    function enterEditMode(){
-      if(!markers.length){ alert('請先完成一次路線計算'); return; }
-      editMode = true;
-      btnConfirmEdit.style.display = 'inline-block';
-      btnToggleEdit.textContent = '取消微調';
-      applyMarkerDraggable(true);
-    }
-    function exitEditMode(){
-      editMode = false;
-      btnConfirmEdit.style.display = 'none';
-      btnToggleEdit.textContent = '微調地點';
-      applyMarkerDraggable(false);
-    }
-
-    btnToggleEdit.addEventListener('click', ()=>{ editMode ? exitEditMode() : enterEditMode(); });
-    btnConfirmEdit.addEventListener('click', ()=>{ if(!waypoints.origin || !waypoints.dest){ alert('尚未設定完整的出發與目的地'); return; } recomputeFromWaypoints(); exitEditMode(); });
-
-    function roundCurrency(n){ return isFinite(n) ? String(Math.round(n)) : '—'; }
-    
-    // ✅ 根據選擇的位數格式化距離
-    function formatKm(km){ 
-      if(!isFinite(km)) return '—';
-      const places = parseInt(document.getElementById('decimalPlaces').value);
-      return km.toFixed(places) + ' 公里';
-    }
-    
-    // ✅ 根據選擇的位數四捨五入距離
-    function roundDistance(km){
-      if(!isFinite(km)) return 0;
-      const places = parseInt(document.getElementById('decimalPlaces').value);
-      const multiplier = Math.pow(10, places);
-      return Math.round(km * multiplier) / multiplier;
-    }
-
-    // ===== 規則判斷：雜費／住宿 =====
-    function evaluateMiscAndLodge(kmOneWay, tripType){
-      let miscText = '';
-      if(tripType === 'training'){
-        miscText = '不可報（訓練／講習不補助雜費）<span class="pill no">不補助</span>';
-      }else{
-        if(kmOneWay >= 60){
-          miscText = '可報 300 元／日（單程≥60 公里）<span class="pill ok">可報</span>';
-        }else if(kmOneWay >= 5){
-          miscText = '可報 120 元／日（單程 5–60 公里）<span class="pill ok">可報</span>';
-        }else{
-          miscText = '不可報（單程未達 5 公里）<span class="pill no">不可報</span>';
-        }
-      }
-      let lodgeText = '';
-      if(kmOneWay >= 60){
-        lodgeText = '可報（需有住宿事實；上限平日 3,500／假日 4,500 元／日）<span class="pill ok">可報</span>';
-      }else{
-        lodgeText = '原則不可報（單程未達 60 公里）<span class="pill no">不可報</span>';
-      }
-      return { miscText, lodgeText };
-    }
-
-    function applySummary(originLabel, destLabel, km, fuel, tripType){
-      // ✅ 根據選擇的位數四捨五入距離
-      const roundedKm = roundDistance(km);
-      const roundTripKm = roundedKm * 2;
-      const oneWayFee = roundedKm * fuel;
-      const roundTripFee = oneWayFee * 2;
-
-      document.getElementById('sumOrigin').textContent = originLabel;
-      document.getElementById('sumDest').textContent   = destLabel;
-      document.getElementById('sumDist').innerHTML     = `${formatKm(roundedKm)}（來回：${formatKm(roundTripKm)}）`;
-      document.getElementById('sumOne').textContent    = roundCurrency(oneWayFee)  + ' 元';
-      document.getElementById('sumRound').textContent  = roundCurrency(roundTripFee)+ ' 元';
-      document.getElementById('sumPerKm').textContent  = (isFinite(fuel) ? fuel.toFixed(1) : '—') + ' 元/公里';
-
-      const evals = evaluateMiscAndLodge(roundedKm, tripType);
-      document.getElementById('sumMisc').innerHTML   = evals.miscText;
-      document.getElementById('sumLodge').innerHTML  = evals.lodgeText;
-      document.getElementById('sumType').textContent = (tripType === 'training' ? '訓練／講習' : '一般出差');
-    }
-
-    function recomputeFromWaypoints(){
-      const originLabel = document.getElementById('originAlias').value.trim() || document.getElementById('origin').value.trim() || '出發地';
-      const destLabel   = document.getElementById('destAlias').value.trim()   || document.getElementById('destination').value.trim() || '目的地';
-      const fuel = parseFloat(document.getElementById('fuelPrice').value);
-      const tripType = document.getElementById('tripType').value;
-      if(!(fuel>=0)) { alert('請輸入正確的每公里費用'); return; }
-
-      clearRoute();
-      const mk1 = addMarkerWithLabel(waypoints.origin.lat, waypoints.origin.lng, originLabel, {draggable: editMode, role:'origin'});
-      const mk2 = addMarkerWithLabel(waypoints.dest.lat,   waypoints.dest.lng,   destLabel,   {draggable: editMode, role:'dest'});
-      markers.push(mk1,mk2);
-
-      const plan = new L.Routing.Plan([
-        L.latLng(waypoints.origin.lat, waypoints.origin.lng),
-        L.latLng(waypoints.dest.lat,   waypoints.dest.lng)
-      ], { draggableWaypoints:false, addWaypoints:false });
-
-      const router = L.Routing.osrmv1({ serviceUrl:'https://router.project-osrm.org/route/v1' });
-      router.route(plan.getWaypoints(), (err, routes)=>{
-        if(err){ alert('路線規劃錯誤'); return; }
-        const best = routes[0];
-        const km = best.summary.totalDistance / 1000;
-
-        const latlngs = best.coordinates.map(c => L.latLng(c.lat, c.lng));
-        routePolyline = L.polyline(latlngs, { color: getComputedStyle(document.documentElement).getPropertyValue('--route').trim() || '#ff3b30', weight:7, opacity:.98, lineJoin:'round', lineCap:'round', renderer:L.canvas() }).addTo(map).bringToFront();
-        map.fitBounds(routePolyline.getBounds(), {padding:[40,40]});
-
-        applySummary(originLabel, destLabel, km, fuel, tripType);
-
-        upsertPlace({ lat:waypoints.origin.lat, lng:waypoints.origin.lng, displayName: document.getElementById('origin').value.trim() || originLabel, customName: document.getElementById('originAlias').value.trim() });
-        upsertPlace({ lat:waypoints.dest.lat,   lng:waypoints.dest.lng,   displayName: document.getElementById('destination').value.trim() || destLabel, customName: document.getElementById('destAlias').value.trim() });
-      });
-    }
-
-    // ===== 輸入更動後清除舊結果 =====
-    let hasCalculatedOnce = false;
-    function resetOnTextChange(which){
-      if(which === 'origin') waypoints.origin = null;
-      if(which === 'destination') waypoints.dest = null;
-      clearRoute();
-      clearSummary();
-      if(editMode) exitEditMode();
-    }
-    ['origin','destination'].forEach(id=>{
-      const el = document.getElementById(id);
-      el.addEventListener('input', ()=>{ if(hasCalculatedOnce) resetOnTextChange(id); });
-    });
-    document.getElementById('tripType').addEventListener('change', ()=>{
-      if(!routePolyline) return;
-      recomputeFromWaypoints();
-    });
-    
-    // ===== 小數位數變更提醒 =====
-    document.getElementById('decimalPlaces').addEventListener('change', ()=>{
-      if(!routePolyline) return;
-      const places = parseInt(document.getElementById('decimalPlaces').value);
-      let placesText = '';
-      if(places === 0) placesText = '整數（無小數點）';
-      else if(places === 1) placesText = '小數點第一位';
-      else if(places === 2) placesText = '小數點第二位';
-      
-      alert(`⚠️ 提醒：\n\n您已將距離計算位數變更為「${placesText}」。\n\n這將影響總距離、單程費用與往返費用的計算結果。\n\n請注意：假單上填寫的金額也需要跟著調整！`);
-      recomputeFromWaypoints();
-    });
-
-    // ===== 計算路線與費用 =====
-    document.getElementById('btn-calc').addEventListener('click', async()=>{
-      const origin = document.getElementById('origin').value.trim();
-      const destination = document.getElementById('destination').value.trim();
-      const originAlias = document.getElementById('originAlias').value.trim();
-      const destAlias = document.getElementById('destAlias').value.trim();
-      const fuel = parseFloat(document.getElementById('fuelPrice').value);
-      const tripType = document.getElementById('tripType').value;
-      if(!origin || !destination || !(fuel>=0)) { alert('請完整輸入出發/目的地與油資'); return; }
-
-      let g1 = waypoints.origin ? {lat:waypoints.origin.lat, lon:waypoints.origin.lng, display_name: origin} : null;
-      let g2 = waypoints.dest   ? {lat:waypoints.dest.lat,   lon:waypoints.dest.lng,   display_name: destination} : null;
-      if(!g1) g1 = await geocode(origin);
-      if(!g2) g2 = await geocode(destination);
-      if(!g1||!g2){ alert('地名查詢失敗，請換關鍵字'); return; }
-
-      waypoints.origin = {lat:parseFloat(g1.lat), lng:parseFloat(g1.lon)};
-      waypoints.dest   = {lat:parseFloat(g2.lat), lng:parseFloat(g2.lon)};
-
-      upsertPlace({ lat:waypoints.origin.lat, lng:waypoints.origin.lng, displayName: g1.display_name || origin, customName: originAlias });
-      upsertPlace({ lat:waypoints.dest.lat,   lng:waypoints.dest.lng,   displayName: g2.display_name || destination, customName: destAlias });
-
-      clearRoute();
-      const mk1 = addMarkerWithLabel(waypoints.origin.lat, waypoints.origin.lng, originAlias || origin, {draggable: editMode, role:'origin'});
-      const mk2 = addMarkerWithLabel(waypoints.dest.lat, waypoints.dest.lng, destAlias || destination, {draggable: editMode, role:'dest'});
-      markers.push(mk1,mk2);
-
-      const plan = new L.Routing.Plan([
-        L.latLng(waypoints.origin.lat, waypoints.origin.lng),
-        L.latLng(waypoints.dest.lat,   waypoints.dest.lng)
-      ], { draggableWaypoints:false, addWaypoints:false });
-
-      const router = L.Routing.osrmv1({ serviceUrl:'https://router.project-osrm.org/route/v1' });
-      router.route(plan.getWaypoints(), (err, routes)=>{
-        if(err){ alert('路線規劃錯誤'); return; }
-        const best = routes[0];
-        const km = best.summary.totalDistance / 1000;
-
-        const latlngs = best.coordinates.map(c => L.latLng(c.lat, c.lng));
-        routePolyline = L.polyline(latlngs, { color: getComputedStyle(document.documentElement).getPropertyValue('--route').trim() || '#ff3b30', weight:7, opacity:.98, lineJoin:'round', lineCap:'round', renderer:L.canvas() }).addTo(map).bringToFront();
-        map.fitBounds(routePolyline.getBounds(), {padding:[40,40]});
-
-        applySummary(originAlias || origin, destAlias || destination, km, fuel, tripType);
-        hasCalculatedOnce = true;
-      });
-    });
-
-    // ===== 超友善列印 =====
-    const btnPrint = document.getElementById('btnPrintNow');
-    const inputsCard = document.getElementById('inputsCard');
-
-    btnPrint.addEventListener('click', ()=>{
-      document.body.classList.add('hide-editor');
-      inputsCard.classList.add('collapsed');
-      setTimeout(()=> window.print(), 50);
-    });
-
-    window.addEventListener('beforeprint', ()=>{
-      document.body.classList.add('hide-editor');
-      inputsCard.classList.add('collapsed');
-    });
-
-    window.addEventListener('afterprint', ()=>{
-      document.body.classList.remove('hide-editor');
-      inputsCard.classList.remove('collapsed');
-    });
   </script>
 </body>
 </html>
