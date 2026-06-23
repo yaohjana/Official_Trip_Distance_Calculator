@@ -303,6 +303,44 @@
       color: var(--text-muted);
       margin-bottom: 4px;
     }
+    .config-hint {
+      display: block;
+      font-size: 0.72rem;
+      color: #9ca3af;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    /* 車資計算方式切換 */
+    .mode-toggle {
+      display: flex;
+      border: 1px solid #e5e7eb;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: #fff;
+    }
+    .mode-toggle button {
+      flex: 1;
+      padding: 9px 8px;
+      border: none;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-family: inherit;
+      color: var(--text-muted);
+      transition: background 0.15s, color 0.15s;
+    }
+    .mode-toggle button + button {
+      border-left: 1px solid #e5e7eb;
+    }
+    .mode-toggle button.active {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+    }
+    .mode-toggle button:hover:not(.active) {
+      background: #f9fafb;
+    }
 
     /* 右側地圖與摘要 */
     .main-content {
@@ -755,6 +793,15 @@
             </div>
         </div>
 
+        <div class="config-item" id="costCalcModeContainer" style="margin-top:10px">
+            <label>來回車資計算</label>
+            <div class="mode-toggle" id="costCalcModeToggle">
+                <button type="button" class="active" data-mode="sum">加總再乘</button>
+                <button type="button" data-mode="separate">分段各自乘</button>
+            </div>
+            <span class="config-hint" id="costCalcModeHint">各段距離四捨五入後加總，再乘以每公里車資</span>
+        </div>
+
         <div class="config-item" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
             <input type="checkbox" id="showSignOff" style="width:auto; margin:0;">
             <label style="margin:0; cursor:pointer;" for="showSignOff">顯示列印核章欄位</label>
@@ -794,12 +841,12 @@
         <div class="stat-card">
           <div class="stat-label" id="valCostOneLabel">單程費用</div>
           <div class="stat-value" style="color:var(--primary)" id="valCostOne">—</div>
-          <div class="stat-sub">新台幣 (元)</div>
+          <div class="stat-sub" id="valCostOneSub">新台幣 (元)</div>
         </div>
         <div class="stat-card">
           <div class="stat-label" id="valCostRoundLabel">往返總費用</div>
           <div class="stat-value" style="color:#ef4444" id="valCostRound">—</div>
-          <div class="stat-sub">新台幣 (元)</div>
+          <div class="stat-sub" id="valCostRoundSub">新台幣 (元)</div>
         </div>
       </div>
 
@@ -834,7 +881,7 @@
                 <tr>
                   <th>總距離</th>
                   <th>每公里費用</th>
-                  <th>單程費用</th>
+                  <th id="sumOneHeader">單程費用</th>
                 </tr>
                 <tr>
                   <td id="sumDist">—</td>
@@ -1058,8 +1105,19 @@
 
 
     // ===== 計算輔助函式 =====
+    let costCalcMode = 'sum'; // 'sum' | 'separate'
+
     function isRoundTrip() {
         return document.getElementById('journeyType').value === 'round';
+    }
+
+    function isSumThenMultiply() {
+        return isRoundTrip() && costCalcMode === 'sum';
+    }
+
+    function updateCostCalcModeVisibility() {
+        const container = document.getElementById('costCalcModeContainer');
+        container.style.display = isRoundTrip() ? 'block' : 'none';
     }
 
     function roundDistance(km, places) {
@@ -1100,6 +1158,20 @@
         return total;
     }
 
+    function buildLegDistanceProcess(title, rawKm, places) {
+        const rounded = roundDistance(rawKm, places);
+        const placesLabel = getDecimalPlacesLabel(places);
+        return {
+            html: `
+                <div class="calc-process-section">
+                    <div class="calc-process-title">${title}</div>
+                    <div class="calc-process-step">① 原始距離：${rawKm.toFixed(3)} 公里</div>
+                    <div class="calc-process-step">② 四捨五入（${placesLabel}）：${rounded.toFixed(places)} 公里</div>
+                </div>`,
+            rounded
+        };
+    }
+
     function buildLegProcess(title, rawKm, places, fuel) {
         const rounded = roundDistance(rawKm, places);
         const rawProduct = rounded * fuel;
@@ -1118,24 +1190,74 @@
         };
     }
 
+    function computeTripCosts(outboundKm, returnKm, fuel, places) {
+        const roundTrip = isRoundTrip();
+        const outboundRounded = roundDistance(outboundKm, places);
+        const returnRounded = roundTrip && returnKm !== null ? roundDistance(returnKm, places) : 0;
+        const sumMode = isSumThenMultiply();
+
+        let outboundCost = null;
+        let returnCost = null;
+        let totalDist = outboundRounded;
+        let totalCost;
+
+        if (!roundTrip) {
+            outboundCost = calcLegCost(outboundRounded, fuel);
+            totalCost = outboundCost;
+        } else if (sumMode) {
+            totalDist = outboundRounded + returnRounded;
+            totalCost = calcLegCost(totalDist, fuel);
+        } else {
+            totalDist = outboundRounded + returnRounded;
+            outboundCost = calcLegCost(outboundRounded, fuel);
+            returnCost = calcLegCost(returnRounded, fuel);
+            totalCost = outboundCost + returnCost;
+        }
+
+        return {
+            roundTrip,
+            sumMode,
+            outboundRounded,
+            returnRounded,
+            outboundCost,
+            returnCost,
+            totalDist,
+            totalCost
+        };
+    }
+
     function buildCalcProcess(outboundKm, returnKm, fuel, places) {
-        if (!isRoundTrip()) {
+        const costs = computeTripCosts(outboundKm, returnKm, fuel, places);
+
+        if (!costs.roundTrip) {
             return buildLegProcess('【單程】', outboundKm, places, fuel).html;
         }
+
+        if (costs.sumMode) {
+            const outbound = buildLegDistanceProcess('【去程距離】', outboundKm, places);
+            const ret = buildLegDistanceProcess('【回程距離】', returnKm, places);
+            const rawProduct = costs.totalDist * fuel;
+            return outbound.html + ret.html + `
+                <div class="calc-process-section">
+                    <div class="calc-process-title">【合計費用（加總再乘）】</div>
+                    <div class="calc-process-step">③ 加總距離：${outbound.rounded.toFixed(places)} + ${ret.rounded.toFixed(places)} = ${costs.totalDist.toFixed(places)} 公里</div>
+                    <div class="calc-process-step">④ 費用：${costs.totalDist.toFixed(places)} × ${fuel} 元/公里 = ${rawProduct.toFixed(1)} → ${costs.totalCost.toLocaleString()} 元</div>
+                    <div class="calc-process-total">總費用：<span class="highlight-total">${costs.totalCost.toLocaleString()} 元</span></div>
+                </div>`;
+        }
+
         const outbound = buildLegProcess('【去程】', outboundKm, places, fuel);
-        const ret = buildLegProcess('【回程】（回程路徑分開計算）', returnKm, places, fuel);
-        const totalDist = outbound.rounded + ret.rounded;
-        const totalCost = outbound.cost + ret.cost;
-        const simpleDouble = outbound.cost * 2;
+        const ret = buildLegProcess('【回程】（分段各自乘車資）', returnKm, places, fuel);
+        const simpleSum = calcLegCost(costs.totalDist, fuel);
         let note = '';
-        if (totalCost !== simpleDouble) {
-            note = `<div class="calc-process-note">※ 來回分開計算：${outbound.cost.toLocaleString()} + ${ret.cost.toLocaleString()} = ${totalCost.toLocaleString()} 元（非 ${outbound.cost.toLocaleString()} × 2 = ${simpleDouble.toLocaleString()} 元）</div>`;
+        if (costs.totalCost !== simpleSum) {
+            note = `<div class="calc-process-note">※ 分段計算合計 ${costs.totalCost.toLocaleString()} 元（若改為加總再乘：${costs.totalDist.toFixed(places)} × ${fuel} = ${simpleSum.toLocaleString()} 元）</div>`;
         }
         return outbound.html + ret.html + `
             <div class="calc-process-section">
-                <div class="calc-process-title">【合計】</div>
-                <div class="calc-process-step">總距離：${outbound.rounded.toFixed(places)} + ${ret.rounded.toFixed(places)} = ${totalDist.toFixed(places)} 公里</div>
-                <div class="calc-process-total">總費用：${outbound.cost.toLocaleString()} + ${ret.cost.toLocaleString()} = <span class="highlight-total">${totalCost.toLocaleString()} 元</span></div>
+                <div class="calc-process-title">【合計（分段各自乘）】</div>
+                <div class="calc-process-step">總距離：${outbound.rounded.toFixed(places)} + ${ret.rounded.toFixed(places)} = ${costs.totalDist.toFixed(places)} 公里</div>
+                <div class="calc-process-total">總費用：${outbound.cost.toLocaleString()} + ${ret.cost.toLocaleString()} = <span class="highlight-total">${costs.totalCost.toLocaleString()} 元</span></div>
                 ${note}
             </div>`;
     }
@@ -1415,32 +1537,42 @@
         const places = parseInt(document.getElementById('decimalPlaces').value);
         const fuel = parseFloat(document.getElementById('fuelPrice').value);
         const tripType = document.getElementById('tripType').value;
-        const roundTrip = isRoundTrip();
+        const costs = computeTripCosts(outboundKm, returnKm, fuel, places);
+        const { roundTrip, sumMode, outboundRounded, returnRounded, outboundCost, returnCost, totalDist, totalCost } = costs;
 
-        const outboundRounded = roundDistance(outboundKm, places);
-        const outboundCost = calcLegCost(outboundRounded, fuel);
-
-        let returnRounded = 0;
-        let returnCost = 0;
-        let totalDist = outboundRounded;
-        let totalCost = outboundCost;
-
-        if (roundTrip && returnKm !== null) {
-            returnRounded = roundDistance(returnKm, places);
-            returnCost = calcLegCost(returnRounded, fuel);
-            totalDist = outboundRounded + returnRounded;
-            totalCost = outboundCost + returnCost;
-        }
-
-        // 更新統計卡片標籤
+        // 更新統計卡片
         document.getElementById('valDistLabel').textContent = roundTrip ? '總距離 (來回)' : '總距離 (單程)';
-        document.getElementById('valCostOneLabel').textContent = roundTrip ? '去程費用' : '單程費用';
-        document.getElementById('valCostRoundLabel').textContent = roundTrip ? '往返總費用' : '—';
-
         document.getElementById('valDist').textContent = roundTrip
             ? totalDist.toFixed(places)
             : outboundRounded.toFixed(places);
-        document.getElementById('valCostOne').textContent = outboundCost.toLocaleString();
+
+        const valCostOneLabel = document.getElementById('valCostOneLabel');
+        const valCostOneSub = document.getElementById('valCostOneSub');
+        const valCostRoundLabel = document.getElementById('valCostRoundLabel');
+        const valCostRoundSub = document.getElementById('valCostRoundSub');
+
+        if (!roundTrip) {
+            valCostOneLabel.textContent = '單程費用';
+            document.getElementById('valCostOne').textContent = totalCost.toLocaleString();
+            valCostOneSub.textContent = '新台幣 (元)';
+            valCostRoundLabel.textContent = '—';
+            document.getElementById('valCostRound').textContent = '—';
+            valCostRoundSub.textContent = '';
+        } else if (sumMode) {
+            valCostOneLabel.textContent = '去程＋回程距離';
+            document.getElementById('valCostOne').textContent =
+                `${outboundRounded.toFixed(places)} + ${returnRounded.toFixed(places)}`;
+            valCostOneSub.textContent = '公里（加總再乘車資）';
+            valCostRoundLabel.textContent = '往返總費用';
+            valCostRoundSub.textContent = '新台幣 (元)';
+        } else {
+            valCostOneLabel.textContent = '去程費用';
+            document.getElementById('valCostOne').textContent = outboundCost.toLocaleString();
+            valCostOneSub.textContent = '新台幣 (元)';
+            valCostRoundLabel.textContent = '往返總費用';
+            valCostRoundSub.textContent = '新台幣 (元)（含回程）';
+        }
+
         const valCostRoundEl = document.getElementById('valCostRound');
         valCostRoundEl.textContent = roundTrip ? totalCost.toLocaleString() : '—';
         valCostRoundEl.classList.toggle('highlight-total-card', roundTrip);
@@ -1512,18 +1644,31 @@
         }
         document.getElementById('sumDest').textContent = destText;
 
-        document.getElementById('sumJourneyType').textContent = roundTrip ? '來回' : '單程';
+        document.getElementById('sumJourneyType').textContent = roundTrip
+            ? (sumMode ? '來回（加總再乘）' : '來回（分段各自乘）')
+            : '單程';
 
-        if (roundTrip) {
+        const sumOneHeader = document.getElementById('sumOneHeader');
+        if (roundTrip && sumMode) {
+            sumOneHeader.textContent = '車資計算';
             document.getElementById('sumDist').textContent =
                 `去程 ${outboundRounded.toFixed(places)} + 回程 ${returnRounded.toFixed(places)} = ${totalDist.toFixed(places)} 公里`;
-            document.getElementById('sumOne').textContent = `去程 ${outboundCost.toLocaleString()} 元`;
+            document.getElementById('sumOne').textContent =
+                `${totalDist.toFixed(places)} × ${fuel} 元/公里`;
+            document.getElementById('sumRound').innerHTML =
+                `<span class="highlight-total">${totalCost.toLocaleString()} 元</span>`;
+        } else if (roundTrip) {
+            sumOneHeader.textContent = '去程費用';
+            document.getElementById('sumDist').textContent =
+                `去程 ${outboundRounded.toFixed(places)} + 回程 ${returnRounded.toFixed(places)} = ${totalDist.toFixed(places)} 公里`;
+            document.getElementById('sumOne').textContent = `${outboundCost.toLocaleString()} 元`;
             document.getElementById('sumRound').innerHTML =
                 `回程 ${returnCost.toLocaleString()} 元，合計 <span class="highlight-total">${totalCost.toLocaleString()} 元</span>`;
         } else {
+            sumOneHeader.textContent = '單程費用';
             document.getElementById('sumDist').textContent = `${outboundRounded.toFixed(places)} 公里`;
             document.getElementById('sumOne').innerHTML =
-                `<span class="highlight-total">${outboundCost.toLocaleString()} 元</span>`;
+                `<span class="highlight-total">${totalCost.toLocaleString()} 元</span>`;
             document.getElementById('sumRound').textContent = '—';
         }
         
@@ -1581,6 +1726,23 @@
     
     // 初始化時設定預設值
     vehicleTypeSelect.dispatchEvent(new Event('change'));
+    updateCostCalcModeVisibility();
+
+    // 車資計算方式切換
+    document.getElementById('costCalcModeToggle').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-mode]');
+        if (!btn) return;
+        costCalcMode = btn.dataset.mode;
+        document.querySelectorAll('#costCalcModeToggle button').forEach(b => {
+            b.classList.toggle('active', b.dataset.mode === costCalcMode);
+        });
+        document.getElementById('costCalcModeHint').textContent = costCalcMode === 'sum'
+            ? '各段距離四捨五入後加總，再乘以每公里車資'
+            : '各段距離四捨五入後，分別乘以每公里車資再相加';
+        if (lastRouteData.outboundKm !== null) {
+            updateSummary(lastRouteData);
+        }
+    });
 
     // 設定變更時重新顯示計算結果
     ['decimalPlaces', 'vehicleType', 'fuelPrice', 'tripType'].forEach(id => {
@@ -1591,8 +1753,11 @@
         });
     });
     document.getElementById('journeyType').addEventListener('change', () => {
+        updateCostCalcModeVisibility();
         if (currentPoints.length >= 2) {
             recalculateRoute();
+        } else if (lastRouteData.outboundKm !== null) {
+            updateSummary(lastRouteData);
         }
     });
     document.getElementById('fuelPrice').addEventListener('input', () => {
