@@ -291,6 +291,189 @@
     }
     .btn-remove:hover { color: #ef4444; }
 
+    .btn-open-fav {
+      flex-shrink: 0;
+      margin-top: 4px;
+      padding: 6px 8px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+      color: var(--primary);
+      font-size: 0.72rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      line-height: 1.2;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-open-fav:hover {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    /* 常用地點彈出卡片 */
+    .fav-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .fav-modal-overlay.active {
+      display: flex;
+    }
+    .fav-modal {
+      width: 100%;
+      max-width: 380px;
+      max-height: min(520px, 85vh);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: favModalIn 0.2s ease-out;
+    }
+    @keyframes favModalIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .fav-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .fav-modal-header h3 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .fav-modal-close {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .fav-modal-close:hover {
+      background: #f3f4f6;
+      color: var(--text-main);
+    }
+    .fav-modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.75rem 1.25rem;
+      min-height: 120px;
+    }
+    .fav-modal-body .fav-list {
+      max-height: none;
+    }
+    .fav-modal-footer {
+      padding: 0.75rem 1.25rem 1rem;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .btn-fav-save-current {
+      width: 100%;
+      padding: 10px;
+      border: 1px dashed var(--primary);
+      border-radius: var(--radius-md);
+      background: #eff6ff;
+      color: var(--primary);
+      font-size: 0.88rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-fav-save-current:hover {
+      background: #dbeafe;
+    }
+
+    .fav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .fav-empty {
+      text-align: center;
+      font-size: 0.82rem;
+      color: #9ca3af;
+      padding: 1rem 0;
+    }
+    .fav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: #fff;
+    }
+    .fav-item-info { flex: 1; min-width: 0; }
+    .fav-item-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fav-item-addr {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .fav-item-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .btn-fav-apply {
+      padding: 4px 8px;
+      border: 1px solid var(--primary);
+      border-radius: 6px;
+      background: #eff6ff;
+      color: var(--primary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-fav-apply:hover { background: #dbeafe; }
+    .btn-fav-delete {
+      padding: 4px 7px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #9ca3af;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .btn-fav-delete:hover { color: #ef4444; background: #fef2f2; }
+
     .config-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -735,6 +918,7 @@
               </div>
               <input type="text" class="custom-name-input" placeholder="自訂名稱 (選填)" data-custom-name="">
             </div>
+            <button type="button" class="btn-open-fav" data-fav-type="origin" title="選擇常用出發地">常用</button>
           </div>
 
           <!-- 目的地 -->
@@ -749,6 +933,7 @@
               </div>
               <input type="text" class="custom-name-input" placeholder="自訂名稱 (選填)" data-custom-name="">
             </div>
+            <button type="button" class="btn-open-fav" data-fav-type="dest" title="選擇常用目的地">常用</button>
           </div>
         </div>
 
@@ -817,14 +1002,6 @@
         <p style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-top:8px;">
             圖資來源：OpenStreetMap & OSRM
         </p>
-      </div>
-
-      <div class="glass-card" style="display:none">
-          <h2>最近使用的地點</h2>
-          <div id="historyChips" style="display:flex; flex-wrap:wrap; gap:8px;">
-              <!-- History JS will populate this -->
-              <span style="font-size:0.8rem; color:#999">暫無紀錄</span>
-          </div>
       </div>
     </aside>
 
@@ -933,6 +1110,23 @@
     </main>
   </div>
 
+  <!-- 常用地點彈出卡片 -->
+  <div class="fav-modal-overlay" id="favModalOverlay">
+    <div class="fav-modal" role="dialog" aria-modal="true" aria-labelledby="favModalTitle">
+      <div class="fav-modal-header">
+        <h3 id="favModalTitle">常用出發地</h3>
+        <button type="button" class="fav-modal-close" id="favModalClose" aria-label="關閉">✕</button>
+      </div>
+      <div class="fav-modal-body">
+        <div id="favModalList" class="fav-list"></div>
+      </div>
+      <div class="fav-modal-footer">
+        <button type="button" class="btn-fav-save-current" id="favModalSaveBtn">☆ 儲存目前出發地</button>
+        <span class="config-hint">資料保存在本機瀏覽器，不會上傳</span>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ===== 初始化地圖 =====
     const map = L.map('map').setView([23.6, 120.9], 7);
@@ -948,9 +1142,162 @@
 
     // ===== 狀態管理 =====
     const state = {
-        waypoints: [], // Array of {lat, lng, name}
-        history: JSON.parse(localStorage.getItem('trip_calc_history') || '[]')
+        waypoints: [],
+        history: JSON.parse(localStorage.getItem('trip_calc_history') || '[]'),
+        favOrigins: JSON.parse(localStorage.getItem('trip_calc_fav_origins') || '[]'),
+        favDests: JSON.parse(localStorage.getItem('trip_calc_fav_dests') || '[]')
     };
+
+    const FAV_MAX = 20;
+    let favModalType = null;
+
+    function escapeHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    function getFavList(type) {
+        return type === 'origin' ? state.favOrigins : state.favDests;
+    }
+
+    function persistFavList(type) {
+        const key = type === 'origin' ? 'trip_calc_fav_origins' : 'trip_calc_fav_dests';
+        localStorage.setItem(key, JSON.stringify(getFavList(type)));
+        renderFavorites();
+    }
+
+    function getLocationRow(type) {
+        return locationsContainer.querySelector(`.location-row[data-type="${type}"]`);
+    }
+
+    function getFavDisplayName(item) {
+        return item.customName || item.name;
+    }
+
+    function applyFavorite(type, item) {
+        const row = getLocationRow(type);
+        if (!row) return;
+        const input = row.querySelector('.waypoint-input');
+        const customInput = row.querySelector('.custom-name-input');
+        input.value = item.name;
+        input.dataset.lat = item.lat;
+        input.dataset.lng = item.lng;
+        input.dataset.fullAddress = item.name;
+        if (customInput) customInput.value = item.customName || '';
+    }
+
+    function saveFavorite(type) {
+        const row = getLocationRow(type);
+        const input = row.querySelector('.waypoint-input');
+        const customInput = row.querySelector('.custom-name-input');
+        const name = input.value.trim();
+        const lat = input.dataset.lat;
+        const lng = input.dataset.lng;
+        const customName = customInput ? customInput.value.trim() : '';
+        const typeLabel = type === 'origin' ? '出發地' : '目的地';
+
+        if (!name || !lat || !lng) {
+            alert(`請先搜尋並選擇${typeLabel}後再儲存`);
+            return false;
+        }
+
+        const list = getFavList(type);
+        if (list.some(f => f.lat === lat && f.lng === lng)) {
+            alert(`此${typeLabel}已在常用清單中`);
+            return false;
+        }
+        if (list.length >= FAV_MAX) {
+            alert(`常用${typeLabel}最多 ${FAV_MAX} 筆，請先刪除不需要的項目`);
+            return false;
+        }
+
+        list.unshift({
+            id: Date.now().toString(),
+            name,
+            customName,
+            lat,
+            lng
+        });
+        if (type === 'origin') state.favOrigins = list;
+        else state.favDests = list;
+        persistFavList(type);
+        return true;
+    }
+
+    function removeFavorite(type, id) {
+        const list = getFavList(type).filter(f => f.id !== id);
+        if (type === 'origin') state.favOrigins = list;
+        else state.favDests = list;
+        persistFavList(type);
+    }
+
+    function renderFavList(type, container) {
+        const list = getFavList(type);
+        const typeLabel = type === 'origin' ? '出發地' : '目的地';
+        if (list.length === 0) {
+            container.innerHTML = `<div class="fav-empty">尚無常用${typeLabel}<br><span style="font-size:0.75rem">搜尋地點後，可點下方按鈕儲存</span></div>`;
+            return;
+        }
+        container.innerHTML = '';
+        list.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'fav-item';
+            const displayName = getFavDisplayName(item);
+            div.innerHTML = `
+                <div class="fav-item-info">
+                    <div class="fav-item-name">${escapeHtml(displayName)}</div>
+                    ${item.customName ? `<div class="fav-item-addr">${escapeHtml(item.name)}</div>` : ''}
+                </div>
+                <div class="fav-item-actions">
+                    <button type="button" class="btn-fav-apply">套用</button>
+                    <button type="button" class="btn-fav-delete" title="刪除">✕</button>
+                </div>`;
+            div.querySelector('.btn-fav-apply').addEventListener('click', () => {
+                applyFavorite(type, item);
+                closeFavModal();
+            });
+            div.querySelector('.btn-fav-delete').addEventListener('click', () => {
+                if (confirm(`確定刪除「${displayName}」？`)) removeFavorite(type, item.id);
+            });
+            container.appendChild(div);
+        });
+    }
+
+    function renderFavorites() {
+        if (favModalType) {
+            renderFavList(favModalType, document.getElementById('favModalList'));
+        }
+    }
+
+    function openFavModal(type) {
+        favModalType = type;
+        const typeLabel = type === 'origin' ? '出發地' : '目的地';
+        document.getElementById('favModalTitle').textContent = `常用${typeLabel}`;
+        document.getElementById('favModalSaveBtn').textContent = `☆ 儲存目前${typeLabel}`;
+        renderFavList(type, document.getElementById('favModalList'));
+        document.getElementById('favModalOverlay').classList.add('active');
+    }
+
+    function closeFavModal() {
+        document.getElementById('favModalOverlay').classList.remove('active');
+        favModalType = null;
+    }
+
+    document.querySelectorAll('.btn-open-fav').forEach(btn => {
+        btn.addEventListener('click', () => openFavModal(btn.dataset.favType));
+    });
+
+    document.getElementById('favModalClose').addEventListener('click', closeFavModal);
+    document.getElementById('favModalOverlay').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeFavModal();
+    });
+    document.getElementById('favModalSaveBtn').addEventListener('click', () => {
+        if (favModalType) saveFavorite(favModalType);
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && favModalType) closeFavModal();
+    });
 
     // ===== DOM 元素 =====
     const locationsContainer = document.getElementById('locationsContainer');
@@ -986,39 +1333,70 @@
     let debounceTimer;
     
     function setupAutocomplete(input) {
-        const list = input.nextElementSibling; // .autocomplete-items
+        const list = input.nextElementSibling;
+        const row = input.closest('.location-row');
+        const rowType = row ? row.dataset.type : null;
 
-        // 輔助函式：顯示歷史紀錄選單
-        const showHistoryDropdown = () => {
-            list.innerHTML = '';
-            if (state.history.length === 0) return;
+        const appendFavItems = () => {
+            if (rowType !== 'origin' && rowType !== 'dest') return false;
+            const favs = getFavList(rowType);
+            if (favs.length === 0) return false;
 
-            // 加入標題
             const header = document.createElement('div');
             header.className = 'history-label';
-            header.textContent = '🕒 最近使用的地點';
+            header.textContent = rowType === 'origin' ? '⭐ 常用出發地' : '⭐ 常用目的地';
             list.appendChild(header);
 
-            state.history.forEach(item => {
+            favs.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'autocomplete-item';
+                const displayName = getFavDisplayName(item);
                 div.innerHTML = `
-                    <span class="item-icon">↺</span>
+                    <span class="item-icon">★</span>
                     <div>
-                        <strong>${item.name}</strong>
-                    </div>
-                `;
+                        <strong>${escapeHtml(displayName)}</strong>
+                        ${item.customName ? `<small>${escapeHtml(item.name)}</small>` : ''}
+                    </div>`;
                 div.addEventListener('click', function(e) {
-                    e.stopPropagation(); // 阻止冒泡
-                    input.value = item.name;
-                    input.dataset.lat = item.lat;
-                    input.dataset.lng = item.lng;
-                    input.dataset.fullAddress = item.name;
+                    e.stopPropagation();
+                    applyFavorite(rowType, item);
                     closeAllLists();
                 });
                 list.appendChild(div);
             });
-            list.classList.add('active');
+            return true;
+        };
+
+        const showHistoryDropdown = () => {
+            list.innerHTML = '';
+            let hasItems = appendFavItems();
+
+            if (state.history.length > 0) {
+                const header = document.createElement('div');
+                header.className = 'history-label';
+                header.textContent = '🕒 最近使用的地點';
+                list.appendChild(header);
+
+                state.history.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-item';
+                    div.innerHTML = `
+                        <span class="item-icon">↺</span>
+                        <div><strong>${escapeHtml(item.name)}</strong></div>`;
+                    div.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        input.value = item.name;
+                        input.dataset.lat = item.lat;
+                        input.dataset.lng = item.lng;
+                        input.dataset.fullAddress = item.name;
+                        closeAllLists();
+                    });
+                    list.appendChild(div);
+                });
+                hasItems = true;
+            }
+
+            if (hasItems) list.classList.add('active');
         };
 
         // 事件：獲得焦點時，若無內容則顯示歷史紀錄
@@ -1795,34 +2173,6 @@
     window.onbeforeprint = () => {
         map.invalidateSize();
     };
-
-    function renderHistory() {
-        const container = document.getElementById('historyChips');
-        if (state.history.length === 0) return;
-        
-        container.innerHTML = '';
-        state.history.forEach(h => {
-            const btn = document.createElement('button');
-            btn.className = 'btn-secondary';
-            btn.style.fontSize = '0.8rem';
-            btn.textContent = h.name;
-            btn.onclick = () => {
-                if (window.currentFocusedInput) {
-                    window.currentFocusedInput.value = h.name;
-                    window.currentFocusedInput.dataset.lat = h.lat;
-                    window.currentFocusedInput.dataset.lng = h.lng;
-                    // Trigger input event to simulate user action (optional)
-                } else {
-                    // Default to Origin if nothing focused
-                    const originInput = document.querySelector('input[data-type="origin"] .waypoint-input'); // fix selector logic if needed
-                    // Simplified: just alert user
-                    alert('請先點選一個輸入框，再點擊歷史地點');
-                }
-            };
-            container.appendChild(btn);
-        });
-    }
-    renderHistory();
 
   </script>
 </body>
