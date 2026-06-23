@@ -375,6 +375,56 @@
       color: #9ca3af;
     }
 
+    /* 計算過程區塊 */
+    .calc-process {
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: #374151;
+    }
+    .calc-process-section {
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px dashed #e5e7eb;
+    }
+    .calc-process-section:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    .calc-process-title {
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .calc-process-step {
+      padding-left: 1rem;
+      color: #4b5563;
+    }
+    .calc-process-total {
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: var(--text-main);
+      margin-top: 4px;
+    }
+    .calc-process-note {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-top: 6px;
+    }
+
+    /* 報告書重點欄位：出發地、目的地、合計金額 */
+    #sumOrigin, #sumDest {
+      font-weight: 800;
+      font-size: 1.15em;
+    }
+    .highlight-total {
+      font-weight: 800;
+      font-size: 1.35em;
+    }
+    #valCostRound.highlight-total-card {
+      font-size: 1.85rem;
+    }
+
     /* 簽章欄位：網頁畫面中隱藏，僅列印時顯示 */
     .sign-off-section {
       display: none !important;
@@ -383,8 +433,8 @@
     /* 列印專用樣式 - 專業公文版 */
     @media print {
       @page {
-        size: A4;
-        margin: 10mm; /* 設定邊界 */
+        size: A4 portrait;
+        margin: 8mm;
       }
       
       .dev-tag { display: none !important; }
@@ -398,9 +448,23 @@
         display: block !important;
       }
 
-      /* 隱藏網頁介面元素 */
-      header, .sidebar, .summary-grid, .btn-secondary, .btn-action, .loading-overlay, .leaflet-control-zoom, .leaflet-control-attribution, #mapDragHint { 
-        display: none !important; 
+      /* 隱藏網頁介面元素（含計算過程、試算提示） */
+      header, .sidebar, .summary-grid, .btn-secondary, .btn-action, .loading-overlay,
+      .leaflet-control-zoom, .leaflet-control-attribution, #mapDragHint,
+      #policyAlert, #calcProcessCard, .screen-only {
+        display: none !important;
+      }
+
+      /* 單頁 A4 版面容器 */
+      .print-sheet {
+        display: flex !important;
+        flex-direction: column;
+        height: 281mm;
+        max-height: 281mm;
+        overflow: hidden;
+        page-break-before: avoid;
+        page-break-after: avoid;
+        page-break-inside: avoid;
       }
       
       /* 確保主容器撐滿寬度但移除 Flex */
@@ -421,48 +485,47 @@
       /* 1. 表格樣式：專業框線 */
       .print-only-summary {
         display: block !important;
-        margin-bottom: 5mm;
+        flex: 0 0 auto;
+        margin-bottom: 3mm;
         width: 100%;
       }
       
       .print-only-summary h2 {
-        font-size: 20pt;
+        font-size: 16pt;
         font-weight: bold;
         text-align: center;
-        margin: 0 0 5mm 0;
+        margin: 0 0 3mm 0;
         padding-bottom: 2mm;
-        border-bottom: 3px double #000; /* 標題下方雙線 */
+        border-bottom: 3px double #000;
       }
       
-      /* 當顯示核章欄位時，縮小表格間距 */
       body.show-sign-off .print-only-summary {
-        margin-bottom: 3mm !important;
+        margin-bottom: 2mm !important;
       }
       
       body.show-sign-off .print-only-summary h2 {
-        font-size: 18pt !important;
-        margin: 0 0 3mm 0 !important;
-        padding-bottom: 1mm !important;
+        font-size: 14pt !important;
+        margin: 0 0 2mm 0 !important;
       }
 
       .summary-table {
         width: 100%;
         border-collapse: collapse;
-        border: 2px solid #000; /* 外框加粗 */
+        border: 2px solid #000;
       }
 
       .summary-table th, .summary-table td {
         border: 1px solid #000;
-        padding: 8px 10px;
-        font-size: 12pt;
+        padding: 5px 8px;
+        font-size: 10pt;
         vertical-align: middle;
+        line-height: 1.3;
       }
       
-      /* 當顯示核章欄位時，縮小表格內部間距 */
-      body.show-sign-off .summary-table th, 
+      body.show-sign-off .summary-table th,
       body.show-sign-off .summary-table td {
-        padding: 5px 8px !important;
-        font-size: 11pt !important;
+        padding: 3px 6px !important;
+        font-size: 9pt !important;
       }
 
       .summary-table th {
@@ -478,36 +541,42 @@
         text-align: left;
       }
 
-      /* 特別強調總距離與費用 */
-      #sumDist, #sumRound {
+      /* 特別強調：出發地、目的地、合計金額 */
+      #sumOrigin, #sumDest {
+        font-weight: 800 !important;
+        font-size: 12pt !important;
+      }
+      .highlight-total {
+        font-weight: 800 !important;
+        font-size: 14pt !important;
+      }
+      #sumDist {
         font-weight: bold;
       }
 
-      /* 2. 地圖樣式：固定高度確保出現且不換頁 */
-      .glass-card {
-        background: none !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        display: block !important;
+      /* 2. 地圖區塊：彈性高度填滿剩餘空間 */
+      .map-print-block {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex !important;
+        flex-direction: column;
       }
 
       .map-container {
         display: block !important;
-        /* A4 高度約 297mm，扣除邊距(20) 表格(約80) 簽核(30)，地圖給 140mm 安全 */
-        height: 140mm !important; 
+        flex: 1 1 auto;
+        height: auto !important;
+        min-height: 0;
+        max-height: 168mm;
         width: 100% !important;
-        border: 2px solid #000 !important; /* 地圖加框 */
-        margin-top: 5mm;
+        border: 2px solid #000 !important;
+        margin-top: 0;
         position: relative !important;
         overflow: hidden !important;
       }
       
-      /* 當顯示核章欄位時，縮小地圖為90% */
       body.show-sign-off .map-container {
-        height: 126mm !important; /* 140mm * 0.9 = 126mm */
-        margin-top: 3mm !important;
+        max-height: 142mm !important;
       }
 
       #map {
@@ -519,41 +588,52 @@
       /* 列印時顯示路徑標註 */
       .map-route-label {
         display: block !important;
+        flex: 0 0 auto;
         text-align: center !important;
         background: white !important;
-        padding: 6px 16px !important;
-        border: 2px solid #000 !important;
-        border-radius: 4px !important;
-        font-size: 11pt !important;
+        padding: 4px 12px !important;
+        border: 1px solid #000 !important;
+        border-radius: 0 !important;
+        font-size: 9pt !important;
         font-weight: bold !important;
-        margin-bottom: 5mm !important;
+        margin-bottom: 2mm !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
       
-      /* 當顯示核章欄位時，縮小標註間距 */
       body.show-sign-off .map-route-label {
-        margin-bottom: 3mm !important;
-        padding: 4px 12px !important;
-        font-size: 10pt !important;
+        margin-bottom: 1mm !important;
+        padding: 3px 10px !important;
+        font-size: 8pt !important;
       }
 
-      /* 3. 核章區：置底或緊接 */
+      .map-print-block.glass-card {
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      /* 3. 核章區 */
       .sign-off-section {
-        display: none; /* 預設隱藏 */
-        margin-top: 10mm;
+        display: none;
+        flex: 0 0 auto;
+        margin-top: 3mm;
         padding: 0 5mm;
         justify-content: space-between;
-        font-size: 14pt;
+        font-size: 11pt;
         font-family: "DFKai-SB", serif;
       }
       
       body.show-sign-off .sign-off-section {
         display: flex !important;
-        margin-top: 5mm !important;
-        font-size: 12pt !important;
+        margin-top: 2mm !important;
+        font-size: 10pt !important;
       }
     }
+
+    .print-sheet { display: contents; }
 
     .print-only-summary { display: none; }
 
@@ -658,12 +738,21 @@
             <input type="number" id="fuelPrice" value="3.0" step="0.1">
         </div>
         
-        <div class="config-item" style="margin-top:10px">
-             <label>出差性質</label>
-             <select id="tripType">
-                  <option value="general">一般出差</option>
-                  <option value="training">訓練／講習 (無雜費)</option>
-             </select>
+        <div class="config-row" style="margin-top:10px">
+            <div class="config-item">
+                <label>行程類型</label>
+                <select id="journeyType">
+                    <option value="oneway">單程</option>
+                    <option value="round" selected>來回</option>
+                </select>
+            </div>
+            <div class="config-item">
+                <label>出差性質</label>
+                <select id="tripType">
+                    <option value="general">一般出差</option>
+                    <option value="training">訓練／講習 (無雜費)</option>
+                </select>
+            </div>
         </div>
 
         <div class="config-item" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
@@ -675,8 +764,7 @@
             計算最佳路徑與費用
         </button>
 
-        <!-- 新增：紅色列印按鈕 -->
-        <button onclick="window.print()" class="btn-action" style="background:var(--accent-route); margin-top:10px;">
+        <button id="btnPrint" class="btn-action" style="background:var(--accent-route); margin-top:10px;">
             🖨️ 列印報告書
         </button>
         <p style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-top:8px;">
@@ -696,89 +784,103 @@
     <!-- 右側主要內容 -->
     <main class="main-content">
 
-      <!-- 列印專用區域 (還原原版配置) - 移至最上方 -->
-      <div class="print-only-summary">
-          <h2>機關差旅路徑費用報告書</h2>
-          <table class="summary-table">
-            <tbody>
-              <tr>
-                <th>出發地</th>
-                <th>目的地</th>
-                <th>總距離</th>
-              </tr>
-              <tr>
-                <td id="sumOrigin">—</td>
-                <td id="sumDest">—</td>
-                <td id="sumDist">—</td>
-              </tr>
-              <tr>
-                <th>每公里費用</th>
-                <th>單程費用</th>
-                <th>往返費用</th>
-              </tr>
-              <tr>
-                <td id="sumPerKm">—</td>
-                <td id="sumOne">—</td>
-                <td id="sumRound">—</td>
-              </tr>
-              <tr>
-                <th>可報雜支</th>
-                <th>可報住宿</th>
-                <th>出差性質</th>
-              </tr>
-              <tr>
-                <td id="sumMisc">—</td>
-                <td id="sumLodge">—</td>
-                <td id="sumType">—</td>
-              </tr>
-            </tbody>
-          </table>
-      </div>
-      
-      <!-- 統計卡片 -->
+      <!-- 螢幕顯示：統計卡片 -->
       <div class="summary-grid">
         <div class="stat-card">
-          <div class="stat-label">總距離 (單程)</div>
+          <div class="stat-label" id="valDistLabel">總距離 (單程)</div>
           <div class="stat-value" id="valDist">—</div>
           <div class="stat-sub">公里</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">單程費用</div>
+          <div class="stat-label" id="valCostOneLabel">單程費用</div>
           <div class="stat-value" style="color:var(--primary)" id="valCostOne">—</div>
           <div class="stat-sub">新台幣 (元)</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">往返總費用</div>
+          <div class="stat-label" id="valCostRoundLabel">往返總費用</div>
           <div class="stat-value" style="color:#ef4444" id="valCostRound">—</div>
           <div class="stat-sub">新台幣 (元)</div>
         </div>
       </div>
 
-      <!-- 政策提示 (動態) -->
+      <!-- 螢幕顯示：計算過程 -->
+      <div class="glass-card" id="calcProcessCard" style="display:none; padding: 1rem; border-left: 4px solid #10b981;">
+          <h2 style="margin-bottom:0.5rem;">計算過程</h2>
+          <div id="calcProcess" class="calc-process"></div>
+      </div>
+
+      <!-- 螢幕顯示：補助試算提示 -->
       <div class="glass-card" style="padding: 1rem; border-left: 4px solid var(--primary); display:none" id="policyAlert">
           <div style="font-size:0.9rem; font-weight:700; margin-bottom:4px">補助試算提示</div>
           <div id="policyText" style="font-size:0.85rem; color:#4b5563; line-height:1.5"></div>
       </div>
 
-      <!-- 地圖 -->
-      <div class="glass-card" style="padding:0; border:none;">
-        <div class="map-route-label" id="mapRouteLabel" style="display:none;">
-          Google 地圖對應之最短路徑
+      <!-- 列印單頁 A4 區塊 -->
+      <div class="print-sheet">
+        <div class="print-only-summary">
+            <h2>機關差旅路徑費用報告書</h2>
+            <table class="summary-table">
+              <tbody>
+                <tr>
+                  <th>出發地</th>
+                  <th>目的地</th>
+                  <th>行程類型</th>
+                </tr>
+                <tr>
+                  <td id="sumOrigin">—</td>
+                  <td id="sumDest">—</td>
+                  <td id="sumJourneyType">—</td>
+                </tr>
+                <tr>
+                  <th>總距離</th>
+                  <th>每公里費用</th>
+                  <th>單程費用</th>
+                </tr>
+                <tr>
+                  <td id="sumDist">—</td>
+                  <td id="sumPerKm">—</td>
+                  <td id="sumOne">—</td>
+                </tr>
+                <tr>
+                  <th>往返費用</th>
+                  <th>可報雜支</th>
+                  <th>可報住宿</th>
+                </tr>
+                <tr>
+                  <td id="sumRound">—</td>
+                  <td id="sumMisc">—</td>
+                  <td id="sumLodge">—</td>
+                </tr>
+                <tr>
+                  <th colspan="3">出差性質</th>
+                </tr>
+                <tr>
+                  <td id="sumType" colspan="3">—</td>
+                </tr>
+              </tbody>
+            </table>
         </div>
-        <div class="map-container">
-            <div id="map"></div>
-            <div class="loading-overlay" id="mapLoading">
-                <div class="spinner"></div>
-            </div>
-        </div>
-        <div style="text-align: center; padding: 8px; font-size: 0.75rem; color: var(--text-muted); display: none;" id="mapDragHint">
-          💡 提示：可拖動地圖上的標記來微調地點位置
-        </div>
-      </div>
 
-      <div class="sign-off-section" id="signOffSection">
-          <div>申請人簽章：________________</div>
-          <div>單位主管簽章：________________</div>
+        <!-- 地圖 -->
+        <div class="glass-card map-print-block" style="padding:0; border:none;">
+          <div class="map-route-label" id="mapRouteLabel" style="display:none;">
+            路徑距離
+          </div>
+          <div class="map-container">
+              <div id="map"></div>
+              <div class="loading-overlay" id="mapLoading">
+                  <div class="spinner"></div>
+              </div>
+          </div>
+          <div style="text-align: center; padding: 8px; font-size: 0.75rem; color: var(--text-muted); display: none;" id="mapDragHint">
+            💡 提示：可拖動地圖上的標記來微調地點位置
+          </div>
+        </div>
+
+        <div class="sign-off-section" id="signOffSection">
+            <div>申請人簽章：________________</div>
+            <div>單位主管簽章：________________</div>
+        </div>
       </div>
 
     </main>
@@ -792,8 +894,10 @@
     }).addTo(map);
 
     let routeLayer = null;
+    let returnRouteLayer = null;
     let markers = [];
     let currentPoints = []; // 保存當前的點位資料，用於拖動後重新計算
+    let lastRouteData = { outboundKm: null, returnKm: null, points: [] };
 
     // ===== 狀態管理 =====
     const state = {
@@ -953,6 +1057,102 @@
     document.querySelectorAll('.waypoint-input').forEach(setupAutocomplete);
 
 
+    // ===== 計算輔助函式 =====
+    function isRoundTrip() {
+        return document.getElementById('journeyType').value === 'round';
+    }
+
+    function roundDistance(km, places) {
+        const multiplier = Math.pow(10, places);
+        return Math.round(km * multiplier) / multiplier;
+    }
+
+    function calcLegCost(roundedDist, fuel) {
+        return Math.round(roundedDist * fuel);
+    }
+
+    function getDecimalPlacesLabel(places) {
+        if (places === 0) return '整數';
+        return `小數第 ${places} 位`;
+    }
+
+    async function fetchOsrmRoute(points) {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${points.map(p => `${p.lng},${p.lat}`).join(';')}?overview=full&geometries=geojson`;
+        const resp = await fetch(osrmUrl);
+        const data = await resp.json();
+        if (data.code !== 'Ok') return null;
+        return {
+            distanceKm: data.routes[0].distance / 1000,
+            geometry: data.routes[0].geometry
+        };
+    }
+
+    function calcDirectLineDistance(points) {
+        let total = 0;
+        for (let i = 0; i < points.length - 1; i++) {
+            const p1 = points[i];
+            const p2 = points[i + 1];
+            total += Math.sqrt(
+                Math.pow((p2.lat - p1.lat) * 111, 2) +
+                Math.pow((p2.lng - p1.lng) * 111 * Math.cos(p1.lat * Math.PI / 180), 2)
+            );
+        }
+        return total;
+    }
+
+    function buildLegProcess(title, rawKm, places, fuel) {
+        const rounded = roundDistance(rawKm, places);
+        const rawProduct = rounded * fuel;
+        const cost = calcLegCost(rounded, fuel);
+        const placesLabel = getDecimalPlacesLabel(places);
+        return {
+            html: `
+                <div class="calc-process-section">
+                    <div class="calc-process-title">${title}</div>
+                    <div class="calc-process-step">① 原始距離：${rawKm.toFixed(3)} 公里</div>
+                    <div class="calc-process-step">② 四捨五入（${placesLabel}）：${rounded.toFixed(places)} 公里</div>
+                    <div class="calc-process-step">③ 費用：${rounded.toFixed(places)} × ${fuel} 元/公里 = ${rawProduct.toFixed(1)} → ${cost.toLocaleString()} 元</div>
+                </div>`,
+            rounded,
+            cost
+        };
+    }
+
+    function buildCalcProcess(outboundKm, returnKm, fuel, places) {
+        if (!isRoundTrip()) {
+            return buildLegProcess('【單程】', outboundKm, places, fuel).html;
+        }
+        const outbound = buildLegProcess('【去程】', outboundKm, places, fuel);
+        const ret = buildLegProcess('【回程】（回程路徑分開計算）', returnKm, places, fuel);
+        const totalDist = outbound.rounded + ret.rounded;
+        const totalCost = outbound.cost + ret.cost;
+        const simpleDouble = outbound.cost * 2;
+        let note = '';
+        if (totalCost !== simpleDouble) {
+            note = `<div class="calc-process-note">※ 來回分開計算：${outbound.cost.toLocaleString()} + ${ret.cost.toLocaleString()} = ${totalCost.toLocaleString()} 元（非 ${outbound.cost.toLocaleString()} × 2 = ${simpleDouble.toLocaleString()} 元）</div>`;
+        }
+        return outbound.html + ret.html + `
+            <div class="calc-process-section">
+                <div class="calc-process-title">【合計】</div>
+                <div class="calc-process-step">總距離：${outbound.rounded.toFixed(places)} + ${ret.rounded.toFixed(places)} = ${totalDist.toFixed(places)} 公里</div>
+                <div class="calc-process-total">總費用：${outbound.cost.toLocaleString()} + ${ret.cost.toLocaleString()} = <span class="highlight-total">${totalCost.toLocaleString()} 元</span></div>
+                ${note}
+            </div>`;
+    }
+
+    async function fetchRoutesForPoints(points) {
+        const outbound = await fetchOsrmRoute(points);
+        if (!outbound) return null;
+
+        let returnRoute = null;
+        if (isRoundTrip()) {
+            returnRoute = await fetchOsrmRoute([...points].reverse());
+            if (!returnRoute) return null;
+        }
+
+        return { outbound, return: returnRoute, points };
+    }
+
     // ===== 3. 計算核心 =====
     document.getElementById('btnCalc').addEventListener('click', async () => {
         const inputs = Array.from(document.querySelectorAll('.waypoint-input'));
@@ -1018,14 +1218,11 @@
             return;
         }
 
-        // 呼叫 OSRM
-        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${points.map(p => `${p.lng},${p.lat}`).join(';')}?overview=full&geometries=geojson`;
-        
-        fetch(osrmUrl)
-            .then(r => r.json())
-            .then(data => {
+        // 呼叫 OSRM（去程；來回時另算回程）
+        fetchRoutesForPoints(points)
+            .then(result => {
                 document.getElementById('mapLoading').style.display = 'none';
-                if (data.code !== 'Ok') {
+                if (!result) {
                     document.getElementById('mapRouteLabel').style.display = 'none';
                     const dragHintErr = document.getElementById('mapDragHint');
                     if (dragHintErr) dragHintErr.style.display = 'none';
@@ -1033,14 +1230,19 @@
                     return;
                 }
 
-                const route = data.routes[0];
-                const distanceKm = route.distance / 1000;
-                
-                // 保存當前的點位資料
                 currentPoints = points.map(p => ({ ...p }));
-                
-                renderMapRoute(route.geometry, points);
-                updateSummary(distanceKm, points);
+                lastRouteData = {
+                    outboundKm: result.outbound.distanceKm,
+                    returnKm: result.return ? result.return.distanceKm : null,
+                    points: currentPoints
+                };
+
+                renderMapRoute(
+                    result.outbound.geometry,
+                    points,
+                    result.return ? result.return.geometry : null
+                );
+                updateSummary(lastRouteData);
             })
             .catch(err => {
                 document.getElementById('mapLoading').style.display = 'none';
@@ -1055,55 +1257,57 @@
     // 重新計算路徑（當標記被拖動時調用）
     async function recalculateRoute() {
         if (currentPoints.length < 2) return;
-        
+
         document.getElementById('mapLoading').style.display = 'flex';
-        
-        // 呼叫 OSRM
-        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${currentPoints.map(p => `${p.lng},${p.lat}`).join(';')}?overview=full&geometries=geojson`;
-        
+
         try {
-            const resp = await fetch(osrmUrl);
-            const data = await resp.json();
-            
+            const result = await fetchRoutesForPoints(currentPoints);
             document.getElementById('mapLoading').style.display = 'none';
-            
-            if (data.code !== 'Ok') {
+
+            if (!result) {
                 console.warn('路徑規劃失敗，使用直線路徑');
-                // 如果路徑規劃失敗，繪製直線連接
                 const directLine = {
                     type: 'LineString',
                     coordinates: currentPoints.map(p => [p.lng, p.lat])
                 };
-                renderMapRoute(directLine, currentPoints);
-                // 計算直線距離
-                let totalDistance = 0;
-                for (let i = 0; i < currentPoints.length - 1; i++) {
-                    const p1 = currentPoints[i];
-                    const p2 = currentPoints[i + 1];
-                    const dist = Math.sqrt(
-                        Math.pow((p2.lat - p1.lat) * 111, 2) + 
-                        Math.pow((p2.lng - p1.lng) * 111 * Math.cos(p1.lat * Math.PI / 180), 2)
-                    );
-                    totalDistance += dist;
+                const outboundKm = calcDirectLineDistance(currentPoints);
+                let returnKm = null;
+                let returnGeo = null;
+                if (isRoundTrip()) {
+                    const reversed = [...currentPoints].reverse();
+                    returnGeo = {
+                        type: 'LineString',
+                        coordinates: reversed.map(p => [p.lng, p.lat])
+                    };
+                    returnKm = calcDirectLineDistance(reversed);
                 }
-                updateSummary(totalDistance, currentPoints);
+                lastRouteData = { outboundKm, returnKm, points: currentPoints };
+                renderMapRoute(directLine, currentPoints, returnGeo);
+                updateSummary(lastRouteData);
                 return;
             }
 
-            const route = data.routes[0];
-            const distanceKm = route.distance / 1000;
-            
-            renderMapRoute(route.geometry, currentPoints);
-            updateSummary(distanceKm, currentPoints);
+            lastRouteData = {
+                outboundKm: result.outbound.distanceKm,
+                returnKm: result.return ? result.return.distanceKm : null,
+                points: currentPoints
+            };
+            renderMapRoute(
+                result.outbound.geometry,
+                currentPoints,
+                result.return ? result.return.geometry : null
+            );
+            updateSummary(lastRouteData);
         } catch (err) {
             document.getElementById('mapLoading').style.display = 'none';
             console.error('重新計算路徑錯誤', err);
         }
     }
 
-    function renderMapRoute(geojson, points) {
+    function renderMapRoute(geojson, points, returnGeojson = null) {
         // 清除舊圖層
         if (routeLayer) map.removeLayer(routeLayer);
+        if (returnRouteLayer) map.removeLayer(returnRouteLayer);
         markers.forEach(m => map.removeLayer(m));
         markers = [];
 
@@ -1111,6 +1315,12 @@
         routeLayer = L.geoJSON(geojson, {
             style: { color: '#ef4444', weight: 6, opacity: 0.8 }
         }).addTo(map);
+
+        if (returnGeojson) {
+            returnRouteLayer = L.geoJSON(returnGeojson, {
+                style: { color: '#3b82f6', weight: 5, opacity: 0.75, dashArray: '10, 8' }
+            }).addTo(map);
+        }
 
         // 繪製可拖動標記（使用自訂名稱或原始名稱）
         points.forEach((p, idx) => {
@@ -1165,14 +1375,8 @@
             markers.push(marker);
         });
 
-        // 顯示路徑標註（使用自訂名稱或原始名稱）
-        const routeLabel = document.getElementById('mapRouteLabel');
-        if (points.length >= 2) {
-            const startName = points[0].displayName || points[0].name;
-            const endName = points[points.length - 1].displayName || points[points.length - 1].name;
-            routeLabel.textContent = `Google 地圖對應之最短路徑：${startName} → ${endName}`;
-        }
-        routeLabel.style.display = 'block';
+        // 顯示路徑標註（文字由 updateRouteLabel 設定）
+        document.getElementById('mapRouteLabel').style.display = 'block';
         
         // 顯示拖動提示
         const dragHint = document.getElementById('mapDragHint');
@@ -1180,24 +1384,73 @@
             dragHint.style.display = 'block';
         }
 
-        map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+        const bounds = routeLayer.getBounds();
+        if (returnRouteLayer) bounds.extend(returnRouteLayer.getBounds());
+        map.fitBounds(bounds, { padding: [50, 50] });
     }
 
-    function updateSummary(km, points) {
+    function updateRouteLabel(points, outboundKm, returnKm) {
+        const routeLabel = document.getElementById('mapRouteLabel');
+        if (!points || points.length < 2) {
+            routeLabel.style.display = 'none';
+            return;
+        }
+        const places = parseInt(document.getElementById('decimalPlaces').value);
+        const startName = points[0].displayName || points[0].name;
+        const endName = points[points.length - 1].displayName || points[points.length - 1].name;
+        const outboundDist = roundDistance(outboundKm, places).toFixed(places);
+
+        if (isRoundTrip() && returnKm !== null) {
+            const returnDist = roundDistance(returnKm, places).toFixed(places);
+            routeLabel.textContent =
+                `去程：${startName} → ${endName}（${outboundDist} 公里）　｜　回程：${endName} → ${startName}（${returnDist} 公里）`;
+        } else {
+            routeLabel.textContent = `${startName} → ${endName}（${outboundDist} 公里）`;
+        }
+        routeLabel.style.display = 'block';
+    }
+
+    function updateSummary(routeData) {
+        const { outboundKm, returnKm, points } = routeData;
         const places = parseInt(document.getElementById('decimalPlaces').value);
         const fuel = parseFloat(document.getElementById('fuelPrice').value);
         const tripType = document.getElementById('tripType').value;
-        
-        // 計算邏輯
-        const multiplier = Math.pow(10, places);
-        const roundedDist = Math.round(km * multiplier) / multiplier;
-        const oneWayCost = Math.round(roundedDist * fuel);
-        const roundTripCost = oneWayCost * 2;
+        const roundTrip = isRoundTrip();
 
-        // 更新 UI
-        document.getElementById('valDist').textContent = roundedDist.toFixed(places);
-        document.getElementById('valCostOne').textContent = oneWayCost.toLocaleString();
-        document.getElementById('valCostRound').textContent = roundTripCost.toLocaleString();
+        const outboundRounded = roundDistance(outboundKm, places);
+        const outboundCost = calcLegCost(outboundRounded, fuel);
+
+        let returnRounded = 0;
+        let returnCost = 0;
+        let totalDist = outboundRounded;
+        let totalCost = outboundCost;
+
+        if (roundTrip && returnKm !== null) {
+            returnRounded = roundDistance(returnKm, places);
+            returnCost = calcLegCost(returnRounded, fuel);
+            totalDist = outboundRounded + returnRounded;
+            totalCost = outboundCost + returnCost;
+        }
+
+        // 更新統計卡片標籤
+        document.getElementById('valDistLabel').textContent = roundTrip ? '總距離 (來回)' : '總距離 (單程)';
+        document.getElementById('valCostOneLabel').textContent = roundTrip ? '去程費用' : '單程費用';
+        document.getElementById('valCostRoundLabel').textContent = roundTrip ? '往返總費用' : '—';
+
+        document.getElementById('valDist').textContent = roundTrip
+            ? totalDist.toFixed(places)
+            : outboundRounded.toFixed(places);
+        document.getElementById('valCostOne').textContent = outboundCost.toLocaleString();
+        const valCostRoundEl = document.getElementById('valCostRound');
+        valCostRoundEl.textContent = roundTrip ? totalCost.toLocaleString() : '—';
+        valCostRoundEl.classList.toggle('highlight-total-card', roundTrip);
+
+        updateRouteLabel(points, outboundKm, returnKm);
+
+        // 計算過程（僅螢幕顯示，列印時隱藏）
+        const processHtml = buildCalcProcess(outboundKm, returnKm || 0, fuel, places);
+        document.getElementById('calcProcess').innerHTML = processHtml;
+        document.getElementById('calcProcessCard').style.display = 'block';
 
         // 政策提示邏輯 (螢幕顯示)
         const policyEl = document.getElementById('policyAlert');
@@ -1212,10 +1465,10 @@
             msg.push('⛔ <b>訓練／講習</b>：通常不可報支雜費。');
             miscHtml = '不可報（訓練/講習）';
         } else {
-            if (roundedDist >= 60) {
+            if (outboundRounded >= 60) {
                 msg.push('✅ 單程滿 60 公里：可報雜費 400 元/日，若有住宿事實可報住宿費。');
                 miscHtml = '可報 400 元/日';
-            } else if (roundedDist >= 5) {
+            } else if (outboundRounded >= 5) {
                 msg.push('✅ 單程 5~60 公里：可報雜費 120 元/日。');
                 miscHtml = '可報 120 元/日';
             } else {
@@ -1224,7 +1477,7 @@
             }
         }
 
-        if (roundedDist >= 60) {
+        if (outboundRounded >= 60) {
             lodgeHtml = '可報（需憑據，上限：平日3,500元/假日4,500元）';
             if (tripType !== 'training') {
                 msg.push('🏨 <b>住宿費</b>：有住宿事實者，檢據覈實報支。上限：平日 3,500 元/日，假日 4,500 元/日。');
@@ -1258,8 +1511,21 @@
             destText += ` (經由: ${midPoints.join('、')})`;
         }
         document.getElementById('sumDest').textContent = destText;
-        
-        document.getElementById('sumDist').textContent = `${roundedDist.toFixed(places)} 公里 (來回: ${(roundedDist*2).toFixed(places)})`;
+
+        document.getElementById('sumJourneyType').textContent = roundTrip ? '來回' : '單程';
+
+        if (roundTrip) {
+            document.getElementById('sumDist').textContent =
+                `去程 ${outboundRounded.toFixed(places)} + 回程 ${returnRounded.toFixed(places)} = ${totalDist.toFixed(places)} 公里`;
+            document.getElementById('sumOne').textContent = `去程 ${outboundCost.toLocaleString()} 元`;
+            document.getElementById('sumRound').innerHTML =
+                `回程 ${returnCost.toLocaleString()} 元，合計 <span class="highlight-total">${totalCost.toLocaleString()} 元</span>`;
+        } else {
+            document.getElementById('sumDist').textContent = `${outboundRounded.toFixed(places)} 公里`;
+            document.getElementById('sumOne').innerHTML =
+                `<span class="highlight-total">${outboundCost.toLocaleString()} 元</span>`;
+            document.getElementById('sumRound').textContent = '—';
+        }
         
         // 更新每公里費用，加入交通工具類型說明
         let vehicleLabel = '';
@@ -1269,9 +1535,7 @@
             vehicleLabel = '機車 ';
         }
         document.getElementById('sumPerKm').textContent = vehicleLabel + fuel + ' 元/公里';
-        
-        document.getElementById('sumOne').textContent = oneWayCost.toLocaleString() + ' 元';
-        document.getElementById('sumRound').textContent = roundTripCost.toLocaleString() + ' 元';
+
         document.getElementById('sumMisc').textContent = miscHtml;
         document.getElementById('sumLodge').textContent = lodgeHtml;
         document.getElementById('sumType').textContent = (tripType === 'training' ? '訓練／講習' : '一般出差');
@@ -1318,7 +1582,42 @@
     // 初始化時設定預設值
     vehicleTypeSelect.dispatchEvent(new Event('change'));
 
-    // ===== 列印相關設定 =====
+    // 設定變更時重新顯示計算結果
+    ['decimalPlaces', 'vehicleType', 'fuelPrice', 'tripType'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => {
+            if (lastRouteData.outboundKm !== null) {
+                updateSummary(lastRouteData);
+            }
+        });
+    });
+    document.getElementById('journeyType').addEventListener('change', () => {
+        if (currentPoints.length >= 2) {
+            recalculateRoute();
+        }
+    });
+    document.getElementById('fuelPrice').addEventListener('input', () => {
+        if (lastRouteData.outboundKm !== null) {
+            updateSummary(lastRouteData);
+        }
+    });
+
+    // ===== 列印報告書 =====
+    function preparePrint() {
+        map.invalidateSize();
+        return new Promise(resolve => setTimeout(resolve, 400));
+    }
+
+    async function printReport() {
+        if (lastRouteData.outboundKm === null) {
+            alert('請先計算路徑後再列印報告書');
+            return;
+        }
+        await preparePrint();
+        window.print();
+    }
+
+    document.getElementById('btnPrint').addEventListener('click', printReport);
+
     const showSignOffCheckbox = document.getElementById('showSignOff');
     showSignOffCheckbox.addEventListener('change', function() {
         if (this.checked) {
@@ -1329,7 +1628,7 @@
     });
 
     window.onbeforeprint = () => {
-        map.invalidateSize(); // 確保地圖尺寸正確
+        map.invalidateSize();
     };
 
     function renderHistory() {
