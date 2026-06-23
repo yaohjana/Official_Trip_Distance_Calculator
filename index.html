@@ -1611,31 +1611,36 @@
             return buildLegProcess('【單程】', outboundKm, places, fuel).html;
         }
 
+        const outbound = buildLegDistanceProcess('【去程路徑】', outboundKm, places);
+        const samePathNote = `
+            <div class="calc-process-section">
+                <div class="calc-process-title">【回程（相同路徑）】</div>
+                <div class="calc-process-step">③ 採去程相同路徑回程，距離：${costs.outboundRounded.toFixed(places)} 公里</div>
+            </div>`;
+
         if (costs.sumMode) {
-            const outbound = buildLegDistanceProcess('【去程距離】', outboundKm, places);
-            const ret = buildLegDistanceProcess('【回程距離】', returnKm, places);
             const rawProduct = costs.totalDist * fuel;
-            return outbound.html + ret.html + `
+            return outbound.html + samePathNote + `
                 <div class="calc-process-section">
                     <div class="calc-process-title">【合計費用（加總再乘）】</div>
-                    <div class="calc-process-step">③ 加總距離：${outbound.rounded.toFixed(places)} + ${ret.rounded.toFixed(places)} = ${costs.totalDist.toFixed(places)} 公里</div>
-                    <div class="calc-process-step">④ 費用：${costs.totalDist.toFixed(places)} × ${fuel} 元/公里 = ${rawProduct.toFixed(1)} → ${costs.totalCost.toLocaleString()} 元</div>
+                    <div class="calc-process-step">④ 加總距離：${costs.outboundRounded.toFixed(places)} × 2 = ${costs.totalDist.toFixed(places)} 公里</div>
+                    <div class="calc-process-step">⑤ 費用：${costs.totalDist.toFixed(places)} × ${fuel} 元/公里 = ${rawProduct.toFixed(1)} → ${costs.totalCost.toLocaleString()} 元</div>
                     <div class="calc-process-total">總費用：<span class="highlight-total">${costs.totalCost.toLocaleString()} 元</span></div>
                 </div>`;
         }
 
-        const outbound = buildLegProcess('【去程】', outboundKm, places, fuel);
-        const ret = buildLegProcess('【回程】（分段各自乘車資）', returnKm, places, fuel);
+        const outLeg = buildLegProcess('【去程】', outboundKm, places, fuel);
+        const retLeg = buildLegProcess('【回程（相同路徑）】', outboundKm, places, fuel);
         const simpleSum = calcLegCost(costs.totalDist, fuel);
         let note = '';
         if (costs.totalCost !== simpleSum) {
             note = `<div class="calc-process-note">※ 分段計算合計 ${costs.totalCost.toLocaleString()} 元（若改為加總再乘：${costs.totalDist.toFixed(places)} × ${fuel} = ${simpleSum.toLocaleString()} 元）</div>`;
         }
-        return outbound.html + ret.html + `
+        return outLeg.html + retLeg.html + `
             <div class="calc-process-section">
                 <div class="calc-process-title">【合計（分段各自乘）】</div>
-                <div class="calc-process-step">總距離：${outbound.rounded.toFixed(places)} + ${ret.rounded.toFixed(places)} = ${costs.totalDist.toFixed(places)} 公里</div>
-                <div class="calc-process-total">總費用：${outbound.cost.toLocaleString()} + ${ret.cost.toLocaleString()} = <span class="highlight-total">${costs.totalCost.toLocaleString()} 元</span></div>
+                <div class="calc-process-step">總距離：${costs.outboundRounded.toFixed(places)} × 2（相同路徑）= ${costs.totalDist.toFixed(places)} 公里</div>
+                <div class="calc-process-total">總費用：${outLeg.cost.toLocaleString()} + ${retLeg.cost.toLocaleString()} = <span class="highlight-total">${costs.totalCost.toLocaleString()} 元</span></div>
                 ${note}
             </div>`;
     }
@@ -1643,14 +1648,11 @@
     async function fetchRoutesForPoints(points) {
         const outbound = await fetchOsrmRoute(points);
         if (!outbound) return null;
+        return { outbound, points };
+    }
 
-        let returnRoute = null;
-        if (isRoundTrip()) {
-            returnRoute = await fetchOsrmRoute([...points].reverse());
-            if (!returnRoute) return null;
-        }
-
-        return { outbound, return: returnRoute, points };
+    function getEffectiveReturnKm(outboundKm) {
+        return isRoundTrip() ? outboundKm : null;
     }
 
     // ===== 3. 計算核心 =====
@@ -1718,7 +1720,7 @@
             return;
         }
 
-        // 呼叫 OSRM（去程；來回時另算回程）
+        // 呼叫 OSRM（來回採相同路徑，僅規劃去程）
         fetchRoutesForPoints(points)
             .then(result => {
                 document.getElementById('mapLoading').style.display = 'none';
@@ -1731,17 +1733,14 @@
                 }
 
                 currentPoints = points.map(p => ({ ...p }));
+                const outboundKm = result.outbound.distanceKm;
                 lastRouteData = {
-                    outboundKm: result.outbound.distanceKm,
-                    returnKm: result.return ? result.return.distanceKm : null,
+                    outboundKm,
+                    returnKm: getEffectiveReturnKm(outboundKm),
                     points: currentPoints
                 };
 
-                renderMapRoute(
-                    result.outbound.geometry,
-                    points,
-                    result.return ? result.return.geometry : null
-                );
+                renderMapRoute(result.outbound.geometry, points);
                 updateSummary(lastRouteData);
             })
             .catch(err => {
@@ -1771,32 +1770,23 @@
                     coordinates: currentPoints.map(p => [p.lng, p.lat])
                 };
                 const outboundKm = calcDirectLineDistance(currentPoints);
-                let returnKm = null;
-                let returnGeo = null;
-                if (isRoundTrip()) {
-                    const reversed = [...currentPoints].reverse();
-                    returnGeo = {
-                        type: 'LineString',
-                        coordinates: reversed.map(p => [p.lng, p.lat])
-                    };
-                    returnKm = calcDirectLineDistance(reversed);
-                }
-                lastRouteData = { outboundKm, returnKm, points: currentPoints };
-                renderMapRoute(directLine, currentPoints, returnGeo);
+                lastRouteData = {
+                    outboundKm,
+                    returnKm: getEffectiveReturnKm(outboundKm),
+                    points: currentPoints
+                };
+                renderMapRoute(directLine, currentPoints);
                 updateSummary(lastRouteData);
                 return;
             }
 
+            const outboundKm = result.outbound.distanceKm;
             lastRouteData = {
-                outboundKm: result.outbound.distanceKm,
-                returnKm: result.return ? result.return.distanceKm : null,
+                outboundKm,
+                returnKm: getEffectiveReturnKm(outboundKm),
                 points: currentPoints
             };
-            renderMapRoute(
-                result.outbound.geometry,
-                currentPoints,
-                result.return ? result.return.geometry : null
-            );
+            renderMapRoute(result.outbound.geometry, currentPoints);
             updateSummary(lastRouteData);
         } catch (err) {
             document.getElementById('mapLoading').style.display = 'none';
@@ -1804,23 +1794,17 @@
         }
     }
 
-    function renderMapRoute(geojson, points, returnGeojson = null) {
+    function renderMapRoute(geojson, points) {
         // 清除舊圖層
         if (routeLayer) map.removeLayer(routeLayer);
         if (returnRouteLayer) map.removeLayer(returnRouteLayer);
         markers.forEach(m => map.removeLayer(m));
         markers = [];
 
-        // 繪製路線
+        // 繪製路線（來回採相同路徑，僅顯示去程路線）
         routeLayer = L.geoJSON(geojson, {
             style: { color: '#ef4444', weight: 6, opacity: 0.8 }
         }).addTo(map);
-
-        if (returnGeojson) {
-            returnRouteLayer = L.geoJSON(returnGeojson, {
-                style: { color: '#3b82f6', weight: 5, opacity: 0.75, dashArray: '10, 8' }
-            }).addTo(map);
-        }
 
         // 繪製可拖動標記（使用自訂名稱或原始名稱）
         points.forEach((p, idx) => {
@@ -1885,7 +1869,6 @@
         }
 
         const bounds = routeLayer.getBounds();
-        if (returnRouteLayer) bounds.extend(returnRouteLayer.getBounds());
         map.fitBounds(bounds, { padding: [50, 50] });
     }
 
@@ -1901,9 +1884,10 @@
         const outboundDist = roundDistance(outboundKm, places).toFixed(places);
 
         if (isRoundTrip() && returnKm !== null) {
-            const returnDist = roundDistance(returnKm, places).toFixed(places);
+            const outboundRounded = roundDistance(outboundKm, places);
+            const totalDist = (outboundRounded * 2).toFixed(places);
             routeLabel.textContent =
-                `去程：${startName} → ${endName}（${outboundDist} 公里）　｜　回程：${endName} → ${startName}（${returnDist} 公里）`;
+                `來回相同路徑：${startName} ↔ ${endName}（單程 ${outboundRounded.toFixed(places)} 公里 × 2 = ${totalDist} 公里）`;
         } else {
             routeLabel.textContent = `${startName} → ${endName}（${outboundDist} 公里）`;
         }
@@ -1937,10 +1921,10 @@
             document.getElementById('valCostRound').textContent = '—';
             valCostRoundSub.textContent = '';
         } else if (sumMode) {
-            valCostOneLabel.textContent = '去程＋回程距離';
+            valCostOneLabel.textContent = '單程×2 距離';
             document.getElementById('valCostOne').textContent =
-                `${outboundRounded.toFixed(places)} + ${returnRounded.toFixed(places)}`;
-            valCostOneSub.textContent = '公里（加總再乘車資）';
+                `${outboundRounded.toFixed(places)} × 2`;
+            valCostOneSub.textContent = '公里（相同路徑來回）';
             valCostRoundLabel.textContent = '往返總費用';
             valCostRoundSub.textContent = '新台幣 (元)';
         } else {
@@ -2023,25 +2007,24 @@
         document.getElementById('sumDest').textContent = destText;
 
         document.getElementById('sumJourneyType').textContent = roundTrip
-            ? (sumMode ? '來回（加總再乘）' : '來回（分段各自乘）')
+            ? (sumMode ? '來回（相同路徑，加總再乘）' : '來回（相同路徑，分段各自乘）')
             : '單程';
 
         const sumOneHeader = document.getElementById('sumOneHeader');
+        const samePathDist = `${outboundRounded.toFixed(places)} × 2（相同路徑）= ${totalDist.toFixed(places)} 公里`;
         if (roundTrip && sumMode) {
             sumOneHeader.textContent = '車資計算';
-            document.getElementById('sumDist').textContent =
-                `去程 ${outboundRounded.toFixed(places)} + 回程 ${returnRounded.toFixed(places)} = ${totalDist.toFixed(places)} 公里`;
+            document.getElementById('sumDist').textContent = samePathDist;
             document.getElementById('sumOne').textContent =
                 `${totalDist.toFixed(places)} × ${fuel} 元/公里`;
             document.getElementById('sumRound').innerHTML =
                 `<span class="highlight-total">${totalCost.toLocaleString()} 元</span>`;
         } else if (roundTrip) {
             sumOneHeader.textContent = '去程費用';
-            document.getElementById('sumDist').textContent =
-                `去程 ${outboundRounded.toFixed(places)} + 回程 ${returnRounded.toFixed(places)} = ${totalDist.toFixed(places)} 公里`;
+            document.getElementById('sumDist').textContent = samePathDist;
             document.getElementById('sumOne').textContent = `${outboundCost.toLocaleString()} 元`;
             document.getElementById('sumRound').innerHTML =
-                `回程 ${returnCost.toLocaleString()} 元，合計 <span class="highlight-total">${totalCost.toLocaleString()} 元</span>`;
+                `回程 ${returnCost.toLocaleString()} 元（相同路徑），合計 <span class="highlight-total">${totalCost.toLocaleString()} 元</span>`;
         } else {
             sumOneHeader.textContent = '單程費用';
             document.getElementById('sumDist').textContent = `${outboundRounded.toFixed(places)} 公里`;
